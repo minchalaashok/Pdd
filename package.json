@@ -1,0 +1,13 @@
+{
+  "name": "organ-donation-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LifeLink Smart Organ & Blood Donation Platform",
+  "scripts": {
+    "dev": "npm --prefix client run dev",
+    "dev:client": "npm --prefix client run dev",
+    "dev:server": "npm --prefix server run dev",
+    "start:server": "npm --prefix server start",
+    "build:client": "npm --prefix client run build"
+  }
+}
