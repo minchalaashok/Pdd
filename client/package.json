@@ -16,7 +16,6 @@
     "@capacitor/core": "^8.5.0",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
-    "@rolldown/binding-win32-x64-msvc": "^1.2.3",
     "@supabase/supabase-js": "^2.112.2",
     "canvas-confetti": "^1.9.4",
     "chart.js": "^4.5.1",
