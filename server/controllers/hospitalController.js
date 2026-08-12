@@ -70,14 +70,14 @@ const updateSurgeryStatus = async (req, res) => {
     }
 
     await run(
-      `UPDATE Requests SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [surgery_status, notes || `Surgery updated to ${surgery_status}`, requestId]
+      `UPDATE Requests SET status = ?, notes = ?, updated_at = ? WHERE id = ?`,
+      [surgery_status, notes || `Surgery updated to ${surgery_status}`, new Date().toISOString(), requestId]
     );
 
     // Audit log
     await run(
-      `INSERT INTO AuditLogs (action, target, details) VALUES ('SURGERY_STATUS_UPDATE', 'REQUEST', ?)`,
-      [`Surgery #${requestId} set to ${surgery_status}`]
+      `INSERT INTO AuditLogs (user_id, action, target, details) VALUES (?, 'SURGERY_STATUS_UPDATE', 'REQUEST', ?)`,
+      [0, `Surgery #${requestId} set to ${surgery_status}`]
     );
 
     const broadcast = req.app.get('broadcast');

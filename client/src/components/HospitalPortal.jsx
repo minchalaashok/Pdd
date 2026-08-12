@@ -122,7 +122,7 @@ export const HospitalPortal = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <Building2 size={28} color="var(--primary)" />
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Apex Multi-Specialty Hospital Portal</h2>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)' }}>Apex Multi-Specialty Hospital Portal</h2>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Verified Hospital License: LIC-MED-2026-1001 • Ward 4 Emergency Transplants</p>
         </div>

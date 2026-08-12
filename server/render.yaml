@@ -7,14 +7,25 @@ services:
     rootDir: server
     buildCommand: npm install
     startCommand: node server.js
+    # Auto-restart if health check fails (critical for 24/7 uptime)
+    healthCheckPath: /api/health
+    autoDeploy: true
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
+        value: 10000
+      # ⚠️  DO NOT put real secrets here. Set the following in the Render dashboard
+      # under "Environment" → "Secret Files" or "Environment Variables":
+      #
+      # JWT_SECRET         — a long random string (use: openssl rand -hex 32)
+      # SUPABASE_URL       — your Supabase project URL
+      # SUPABASE_KEY       — your Supabase service_role or anon key
+      #
+      # Example placeholder (replace in Render dashboard, NOT here):
       - key: JWT_SECRET
-        value: lifelink_production_secret_key_2026
+        sync: false
       - key: SUPABASE_URL
-        value: https://rghyqbbtfdvndqvexlbz.supabase.co
+        sync: false
       - key: SUPABASE_KEY
-        value: sb_publishable_jM8HXXExYsFZ5IJBzYKzXw_Irui2JDR
+        sync: false

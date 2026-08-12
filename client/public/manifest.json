@@ -1,0 +1,16 @@
+{
+  "short_name": "LifeLink",
+  "name": "LifeLink Smart Organ & Blood Donation Network",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FFFFFF",
+  "theme_color": "#DC2626",
+  "display": "standalone",
+  "orientation": "portrait"
+}

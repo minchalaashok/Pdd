@@ -326,6 +326,92 @@ export const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Donors Management */}
+        {activeTab === 'Donors' && (
+          <div className="glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>Registered Donors List</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                  <th style={{ padding: 12 }}>Name</th>
+                  <th style={{ padding: 12 }}>Email</th>
+                  <th style={{ padding: 12 }}>Phone</th>
+                  <th style={{ padding: 12 }}>City</th>
+                  <th style={{ padding: 12 }}>Status</th>
+                  <th style={{ padding: 12 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usersList.filter(u => u.role === 'donor').map(u => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: 12, fontWeight: 600 }}>{u.full_name}</td>
+                    <td style={{ padding: 12, color: 'var(--text-muted)' }}>{u.email}</td>
+                    <td style={{ padding: 12 }}>{u.phone}</td>
+                    <td style={{ padding: 12 }}>{u.city}</td>
+                    <td style={{ padding: 12 }}>
+                      <span className={`badge ${u.is_suspended ? 'badge-danger' : 'badge-success'}`}>
+                        {u.is_suspended ? 'SUSPENDED' : 'ACTIVE'}
+                      </span>
+                    </td>
+                    <td style={{ padding: 12 }}>
+                      <button
+                        className="btn-outline"
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', color: u.is_suspended ? 'var(--accent)' : 'var(--primary)' }}
+                        onClick={() => handleToggleUserStatus(u.id)}
+                      >
+                        {u.is_suspended ? 'Activate' : 'Suspend'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Receivers Management */}
+        {activeTab === 'Receivers' && (
+          <div className="glass-card" style={{ padding: 20 }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>Registered Receivers List</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                  <th style={{ padding: 12 }}>Name</th>
+                  <th style={{ padding: 12 }}>Email</th>
+                  <th style={{ padding: 12 }}>Phone</th>
+                  <th style={{ padding: 12 }}>City</th>
+                  <th style={{ padding: 12 }}>Status</th>
+                  <th style={{ padding: 12 }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usersList.filter(u => u.role === 'receiver').map(u => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: 12, fontWeight: 600 }}>{u.full_name}</td>
+                    <td style={{ padding: 12, color: 'var(--text-muted)' }}>{u.email}</td>
+                    <td style={{ padding: 12 }}>{u.phone}</td>
+                    <td style={{ padding: 12 }}>{u.city}</td>
+                    <td style={{ padding: 12 }}>
+                      <span className={`badge ${u.is_suspended ? 'badge-danger' : 'badge-success'}`}>
+                        {u.is_suspended ? 'SUSPENDED' : 'ACTIVE'}
+                      </span>
+                    </td>
+                    <td style={{ padding: 12 }}>
+                      <button
+                        className="btn-outline"
+                        style={{ padding: '4px 10px', fontSize: '0.75rem', color: u.is_suspended ? 'var(--accent)' : 'var(--primary)' }}
+                        onClick={() => handleToggleUserStatus(u.id)}
+                      >
+                        {u.is_suspended ? 'Activate' : 'Suspend'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {/* Hospital Approval Workflow */}
         {activeTab === 'Hospitals' && (
           <div className="glass-card" style={{ padding: 20 }}>

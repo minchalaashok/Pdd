@@ -102,7 +102,11 @@ const run = async (sql, params) => {
     }
     if (/^\s*DELETE/i.test(sql)) {
       let b = supabase.from(tbl).delete();
-      b = applyWhere(b, sql, params);
+      if (!/WHERE/i.test(sql)) {
+        b = b.neq('id', 0);
+      } else {
+        b = applyWhere(b, sql, params);
+      }
       const { error } = await b;
       if (error) { console.error('[DB delete error]', error.message); throw new Error(error.message); }
       return { id: null, changes: 1 };

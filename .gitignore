@@ -25,3 +25,7 @@ Thumbs.db
 # SQLite local database (Supabase is used in production)
 *.db
 *.sqlite
+
+# Local JDK
+jdk17/
+jdk17.zip

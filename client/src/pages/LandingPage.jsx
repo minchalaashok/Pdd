@@ -42,7 +42,7 @@ export const LandingPage = ({ onOpenSos, onOpenQr, onSwitchTab, onOpenSignIn, on
           <Heart size={14} fill="#E53935" /> LifeLink Smart Organ & Blood Donation Network
         </div>
 
-        <h1 style={{ fontSize: '3.2rem', fontWeight: 800, lineHeight: 1.15, marginBottom: 20 }}>
+        <h1 style={{ fontSize: '3.2rem', fontWeight: 800, lineHeight: 1.15, marginBottom: 20, color: 'var(--text-main)' }}>
           Every Drop Counts. Every <span style={{ color: 'var(--primary)' }}>Organ Saves A Life.</span>
         </h1>
 

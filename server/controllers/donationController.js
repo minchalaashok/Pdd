@@ -187,7 +187,7 @@ const updateRequestStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body; // APPROVED, FULFILLED, REJECTED
 
-    await run('UPDATE Requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [status, id]);
+    await run('UPDATE Requests SET status = ?, updated_at = ? WHERE id = ?', [status, new Date().toISOString(), id]);
 
     const broadcast = req.app.get('broadcast');
     if (broadcast) {

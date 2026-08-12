@@ -11,16 +11,15 @@ const ROLES = [
 ];
 
 export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
-  const { login, loginAsDemo } = useAuth();
+  const { login } = useAuth();
   const { liveStats } = useRealtime();
-  const [role, setRole]             = useState('donor');
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
-  const [showPass, setShowPass]     = useState(false);
-  const [loading, setLoading]       = useState(false);
-  const [demoLoading, setDemoLoading] = useState('');
-  const [error, setError]           = useState('');
-  const [success, setSuccess]       = useState('');
+  const [role, setRole]         = useState('donor');
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [success, setSuccess]   = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,21 +30,7 @@ export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
       setSuccess('Login successful! Redirecting...');
       setTimeout(() => onSuccess && onSuccess(role), 900);
     } else {
-      setError(res?.message || 'Invalid credentials. Try demo buttons below.');
-    }
-  };
-
-  const handleDemo = async (roleName) => {
-    setDemoLoading(roleName); setError(''); setSuccess('');
-    const roleObj = ROLES.find(r => r.id === roleName);
-    setEmail(roleObj.demo); setPassword('Password123!'); setRole(roleName);
-    const res = await loginAsDemo(roleName);
-    setDemoLoading('');
-    if (res?.success) {
-      setSuccess(`Logged in as ${roleName.toUpperCase()}! Redirecting...`);
-      setTimeout(() => onSuccess && onSuccess(roleName), 900);
-    } else {
-      setError('Demo login failed. Please try manual login.');
+      setError(res?.message || 'Invalid email or password.');
     }
   };
 
@@ -226,45 +211,6 @@ export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* Quick Demo Buttons */}
-          <div style={{
-            padding: 14, borderRadius: 12, marginBottom: 20,
-            background: 'linear-gradient(135deg, rgba(229,57,53,0.06) 0%, rgba(25,118,210,0.06) 100%)',
-            border: '1px dashed var(--border)',
-          }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Key size={13} /> QUICK DEMO LOGIN (one click)
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {ROLES.map(r => (
-                <button
-                  key={r.id}
-                  className="demo-btn"
-                  onClick={() => handleDemo(r.id)}
-                  disabled={!!demoLoading}
-                  style={{
-                    padding: '8px 10px', borderRadius: 8, fontSize: '0.76rem', fontWeight: 600,
-                    border: `1px solid ${r.color}44`,
-                    background: `${r.color}10`,
-                    color: r.color,
-                    cursor: demoLoading ? 'wait' : 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    opacity: demoLoading && demoLoading !== r.id ? 0.5 : 1,
-                  }}
-                >
-                  {demoLoading === r.id ? '⏳' : r.icon} {r.label} Demo
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>OR SIGN IN MANUALLY</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
           {/* Error / Success */}

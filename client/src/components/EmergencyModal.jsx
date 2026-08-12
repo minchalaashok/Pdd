@@ -11,6 +11,7 @@ export const EmergencyModal = ({ isOpen, onClose }) => {
   const [city, setCity] = useState('Mumbai');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sosError, setSosError] = useState('');
   const [ambulanceDistance, setAmbulanceDistance] = useState(3.8);
 
   // Ambulance tracking countdown simulator
@@ -31,8 +32,9 @@ export const EmergencyModal = ({ isOpen, onClose }) => {
   const handleBroadcast = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setSosError('');
 
-    await fetchApi('/requests', {
+    const res = await fetchApi('/requests', {
       method: 'POST',
       body: JSON.stringify({
         receiver_id: 1,
@@ -45,7 +47,15 @@ export const EmergencyModal = ({ isOpen, onClose }) => {
     });
 
     setLoading(false);
-    setSubmitted(true);
+    if (res?.success || res?.requestId) {
+      setSubmitted(true);
+    } else {
+      // Even if the API call fails, show the emergency UI so the user
+      // can still see local contacts and doesn't get a blank screen.
+      setSosError(res?.message || 'Could not reach server — emergency services not notified via LifeLink. Please call 112 directly.');
+      // Still set submitted so the UI shows emergency info
+      setSubmitted(true);
+    }
   };
 
   return (

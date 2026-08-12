@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { RealtimeProvider } from './context/RealtimeContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { EmergencyModal } from './components/EmergencyModal';
@@ -36,19 +37,23 @@ export function AppContent() {
   // Show full-page auth screens when requested
   if (authPage === 'signin') {
     return (
-      <SignInPage
-        onSwitchToSignUp={() => setAuthPage('signup')}
-        onSuccess={handleAuthSuccess}
-      />
+      <ErrorBoundary>
+        <SignInPage
+          onSwitchToSignUp={() => setAuthPage('signup')}
+          onSuccess={handleAuthSuccess}
+        />
+      </ErrorBoundary>
     );
   }
 
   if (authPage === 'signup') {
     return (
-      <SignUpPage
-        onSwitchToSignIn={() => setAuthPage('signin')}
-        onSuccess={handleAuthSuccess}
-      />
+      <ErrorBoundary>
+        <SignUpPage
+          onSwitchToSignIn={() => setAuthPage('signin')}
+          onSuccess={handleAuthSuccess}
+        />
+      </ErrorBoundary>
     );
   }
 
@@ -56,72 +61,80 @@ export function AppContent() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
       {/* Header Navigation Bar */}
-      <Navbar
-        onOpenSos={() => setIsSosOpen(true)}
-        onOpenQr={() => setIsQrOpen(true)}
-        onOpenAuth={() => setAuthPage('signin')}
-        onOpenSignUp={() => setAuthPage('signup')}
-        onOpenAiBot={() => setIsAiBotOpen(true)}
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-      />
+      <ErrorBoundary>
+        <Navbar
+          onOpenSos={() => setIsSosOpen(true)}
+          onOpenQr={() => setIsQrOpen(true)}
+          onOpenAuth={() => setAuthPage('signin')}
+          onOpenSignUp={() => setAuthPage('signup')}
+          onOpenAiBot={() => setIsAiBotOpen(true)}
+          currentTab={currentTab}
+          setCurrentTab={setCurrentTab}
+        />
+      </ErrorBoundary>
 
       {/* Main Active Page View */}
       <div style={{ flex: 1 }}>
-        {currentTab === 'landing' && (
-          <LandingPage
-            onOpenSos={() => setIsSosOpen(true)}
-            onOpenQr={() => setIsQrOpen(true)}
-            onSwitchTab={setCurrentTab}
-            onOpenSignIn={() => setAuthPage('signin')}
-            onOpenSignUp={() => setAuthPage('signup')}
-          />
-        )}
+        <ErrorBoundary>
+          {currentTab === 'landing' && (
+            <LandingPage
+              onOpenSos={() => setIsSosOpen(true)}
+              onOpenQr={() => setIsQrOpen(true)}
+              onSwitchTab={setCurrentTab}
+              onOpenSignIn={() => setAuthPage('signin')}
+              onOpenSignUp={() => setAuthPage('signup')}
+            />
+          )}
 
-        {currentTab === 'user' && (
-          <UserPortal
-            onOpenSos={() => setIsSosOpen(true)}
-            onOpenQr={() => setIsQrOpen(true)}
-          />
-        )}
+          {currentTab === 'user' && (
+            <UserPortal
+              onOpenSos={() => setIsSosOpen(true)}
+              onOpenQr={() => setIsQrOpen(true)}
+            />
+          )}
 
-        {currentTab === 'hospital' && (
-          <HospitalPortal />
-        )}
+          {currentTab === 'hospital' && (
+            <HospitalPortal />
+          )}
 
-        {currentTab === 'admin' && (
-          <AdminDashboard />
-        )}
+          {currentTab === 'admin' && (
+            <AdminDashboard />
+          )}
 
-        {currentTab === 'mobile' && (
-          <MobileAppSimulator
-            onOpenSos={() => setIsSosOpen(true)}
-          />
-        )}
+          {currentTab === 'mobile' && (
+            <MobileAppSimulator
+              onOpenSos={() => setIsSosOpen(true)}
+            />
+          )}
+        </ErrorBoundary>
       </div>
 
       {/* Footer */}
-      <Footer
-        onOpenSos={() => setIsSosOpen(true)}
-        onOpenQr={() => setIsQrOpen(true)}
-      />
+      <ErrorBoundary>
+        <Footer
+          onOpenSos={() => setIsSosOpen(true)}
+          onOpenQr={() => setIsQrOpen(true)}
+        />
+      </ErrorBoundary>
 
       {/* Modals */}
-      <EmergencyModal
-        isOpen={isSosOpen}
-        onClose={() => setIsSosOpen(false)}
-      />
+      <ErrorBoundary>
+        <EmergencyModal
+          isOpen={isSosOpen}
+          onClose={() => setIsSosOpen(false)}
+        />
 
-      <QRCodeModal
-        isOpen={isQrOpen}
-        onClose={() => setIsQrOpen(false)}
-      />
+        <QRCodeModal
+          isOpen={isQrOpen}
+          onClose={() => setIsQrOpen(false)}
+        />
 
-      <AiChatbotModal
-        isOpen={isAiBotOpen}
-        onClose={() => setIsAiBotOpen(false)}
-        onOpenSos={() => { setIsAiBotOpen(false); setIsSosOpen(true); }}
-      />
+        <AiChatbotModal
+          isOpen={isAiBotOpen}
+          onClose={() => setIsAiBotOpen(false)}
+          onOpenSos={() => { setIsAiBotOpen(false); setIsSosOpen(true); }}
+        />
+      </ErrorBoundary>
 
     </div>
   );
@@ -129,12 +142,14 @@ export function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <RealtimeProvider>
-          <AppContent />
-        </RealtimeProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <RealtimeProvider>
+            <AppContent />
+          </RealtimeProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

@@ -3,14 +3,14 @@ import { User, Lock, Mail, Phone, MapPin, Building, Shield, CheckCircle, X, Spar
 import { useAuth } from '../context/AuthContext';
 
 export const AuthModal = ({ isOpen, onClose }) => {
-  const { login, register, loginAsDemo } = useAuth();
+  const { login, register } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [role, setRole] = useState('donor');
   
   // Form States
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('admin@lifelink.org');
-  const [password, setPassword] = useState('Password123!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('Mumbai');
   const [bloodGroup, setBloodGroup] = useState('O+');
@@ -24,22 +24,6 @@ export const AuthModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
-
-  const handleQuickLogin = async (roleName) => {
-    setLoading(true);
-    setErrorMsg('');
-    setRole(roleName);
-    const res = await loginAsDemo(roleName);
-    if (res.success) {
-      setSuccessMsg(`Logged in successfully as ${roleName.toUpperCase()}! Opening portal...`);
-      setTimeout(() => {
-        onClose();
-      }, 1000);
-    } else {
-      setErrorMsg(res.message || 'Login failed');
-    }
-    setLoading(false);
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -126,63 +110,6 @@ export const AuthModal = ({ isOpen, onClose }) => {
             ⚡ Supabase Cloud & Relational Auth Connected
           </p>
         </div>
-
-        {/* Quick Credentials Panel */}
-        {!isRegister && (
-          <div style={{
-            padding: 14,
-            borderRadius: 12,
-            background: 'var(--bg-main)',
-            border: '1px solid var(--border)',
-            marginBottom: 20
-          }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Key size={14} style={{ color: 'var(--primary)' }} /> REAL DEMO CREDENTIALS (CLICK TO AUTO-LOGIN):
-            </div>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <button
-                type="button"
-                className="btn-outline"
-                style={{ fontSize: '0.78rem', padding: '8px', justifyContent: 'flex-start', background: 'rgba(229, 57, 53, 0.08)' }}
-                onClick={() => { setEmail('admin@lifelink.org'); setPassword('Password123!'); setRole('admin'); handleQuickLogin('admin'); }}
-              >
-                🛡️ Admin: admin@lifelink.org
-              </button>
-
-              <button
-                type="button"
-                className="btn-outline"
-                style={{ fontSize: '0.78rem', padding: '8px', justifyContent: 'flex-start', background: 'rgba(25, 118, 210, 0.08)' }}
-                onClick={() => { setEmail('hospital1@lifelink.org'); setPassword('Password123!'); setRole('hospital'); handleQuickLogin('hospital'); }}
-              >
-                🏥 Hospital: hospital1@...
-              </button>
-
-              <button
-                type="button"
-                className="btn-outline"
-                style={{ fontSize: '0.78rem', padding: '8px', justifyContent: 'flex-start', background: 'rgba(67, 160, 71, 0.08)' }}
-                onClick={() => { setEmail('donor1@lifelink.org'); setPassword('Password123!'); setRole('donor'); handleQuickLogin('donor'); }}
-              >
-                🩸 Donor: donor1@lifelink.org
-              </button>
-
-              <button
-                type="button"
-                className="btn-outline"
-                style={{ fontSize: '0.78rem', padding: '8px', justifyContent: 'flex-start', background: 'rgba(251, 140, 0, 0.08)' }}
-                onClick={() => { setEmail('receiver1@lifelink.org'); setPassword('Password123!'); setRole('receiver'); handleQuickLogin('receiver'); }}
-              >
-                🤲 Receiver: receiver1@...
-              </button>
-            </div>
-            
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
-              Common Password for all default accounts: <strong style={{ color: 'var(--primary)' }}>Password123!</strong>
-            </div>
-          </div>
-        )}
 
         {errorMsg && (
           <div style={{ padding: 10, background: '#FEE2E2', color: '#DC2626', borderRadius: 8, fontSize: '0.85rem', marginBottom: 16 }}>

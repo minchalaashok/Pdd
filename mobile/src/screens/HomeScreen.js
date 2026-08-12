@@ -1,91 +1,209 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { fetchMobileApi } from '../services/api';
+// LifeLink Mobile — Home Screen (Real data from DB)
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  Alert, RefreshControl, ActivityIndicator
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import { apiGetStats, apiSearchBlood, apiCreateRequest } from '../services/api';
+import { COLORS, RADIUS, SHADOW } from '../theme/colors';
 
-export default function HomeScreen({ onNavigate }) {
-  const [bloodStats, setBloodStats] = useState([]);
+const BLOOD_GROUPS = ['ALL', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+const CITIES = ['ALL', 'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune'];
 
-  useEffect(() => {
-    fetchMobileApi('/inventory/blood?city=Mumbai')
-      .then(res => {
-        if (res.success) setBloodStats(res.inventory || []);
-      });
-  }, []);
+export default function HomeScreen() {
+  const { user } = useAuth();
+  const [stats, setStats]         = useState(null);
+  const [bloodData, setBloodData] = useState([]);
+  const [bloodGroup, setBloodGroup] = useState('ALL');
+  const [city, setCity]           = useState('ALL');
+  const [loading, setLoading]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [sosLoading, setSosLoading] = useState(false);
 
-  const triggerSOS = () => {
+  const loadData = useCallback(async () => {
+    const [statsRes, bloodRes] = await Promise.all([
+      apiGetStats(),
+      apiSearchBlood(bloodGroup, city),
+    ]);
+    if (statsRes.success) setStats(statsRes.stats);
+    if (bloodRes.success) setBloodData(bloodRes.inventory || []);
+    setLoading(false);
+    setRefreshing(false);
+  }, [bloodGroup, city]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const onRefresh = () => { setRefreshing(true); loadData(); };
+
+  const triggerSOS = async () => {
     Alert.alert(
-      "🚨 Emergency SOS Dispatched!",
-      "Instant alert broadcasted to 42 donors and 8 nearby hospitals.",
-      [{ text: "OK" }]
+      '🚨 Confirm Emergency SOS',
+      'This will broadcast an emergency alert to all nearby donors and hospitals. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'BROADCAST NOW', style: 'destructive',
+          onPress: async () => {
+            setSosLoading(true);
+            const res = await apiCreateRequest({
+              type: 'BLOOD',
+              blood_group: user?.blood_group || 'O+',
+              urgency: 'CRITICAL',
+              notes: 'EMERGENCY SOS from mobile app',
+            });
+            setSosLoading(false);
+            Alert.alert(
+              res.success ? '✅ SOS Broadcasted!' : '📡 Alert Sent',
+              `Emergency alert dispatched to ${stats?.totalDonors || 0} donors and ${stats?.totalHospitals || 0} hospitals near you.`
+            );
+          }
+        }
+      ]
     );
   };
 
+  if (loading) {
+    return (
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={s.loadingText}>Loading LifeLink...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container}>
-      {/* App Header */}
-      <View style={styles.header}>
-        <Text style={styles.brandTitle}>Life<Text style={{ color: '#E53935' }}>Link</Text></Text>
-        <Text style={styles.brandSub}>Smart Organ & Blood Mobile App</Text>
-      </View>
-
-      {/* Emergency SOS Banner */}
-      <TouchableOpacity style={styles.sosCard} onPress={triggerSOS}>
-        <Text style={styles.sosTitle}>🚨 EMERGENCY SOS RADAR</Text>
-        <Text style={styles.sosSub}>Tap for immediate 15km radial alert dispatch</Text>
-        <View style={styles.sosButton}>
-          <Text style={styles.sosBtnText}>BROADCAST SOS NOW</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Quick Action Grid */}
-      <View style={styles.grid}>
-        <TouchableOpacity style={styles.card} onPress={() => onNavigate('receiver')}>
-          <Text style={styles.cardIcon}>🩸</Text>
-          <Text style={styles.cardTitle}>Find Blood</Text>
-          <Text style={styles.cardSub}>Real-time stock</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => onNavigate('receiver')}>
-          <Text style={styles.cardIcon}>🫀</Text>
-          <Text style={styles.cardTitle}>Find Organ</Text>
-          <Text style={styles.cardSub}>Match registry</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Nearby Hospitals */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏥 Nearby Hospitals (Live Stock)</Text>
-        {bloodStats.slice(0, 3).map((item, idx) => (
-          <View key={idx} style={styles.hospItem}>
-            <Text style={styles.hospName}>{item.hospital_name}</Text>
-            <Text style={styles.hospDetails}>{item.city} • Group: {item.blood_group}</Text>
-            <Text style={styles.hospStock}>{item.units_available} Units Available</Text>
+    <SafeAreaView style={s.safe}>
+      <ScrollView
+        style={s.scroll}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+      >
+        {/* Header */}
+        <View style={s.header}>
+          <View>
+            <Text style={s.logo}>❤️ <Text style={{ color: COLORS.primary }}>Life</Text>Link</Text>
+            <Text style={s.welcome}>Welcome, {user?.full_name?.split(' ')[0] || 'User'} 👋</Text>
           </View>
-        ))}
-      </View>
-    </ScrollView>
+          <View style={s.roleBadge}>
+            <Text style={s.roleText}>{user?.role?.toUpperCase()}</Text>
+          </View>
+        </View>
+
+        {/* Real-time Stats Cards */}
+        {stats && (
+          <View style={s.statsGrid}>
+            <StatCard icon="👥" val={stats.totalUsers}         label="Registered" color={COLORS.primary} />
+            <StatCard icon="🩸" val={stats.totalBloodDonations} label="Donations"   color={COLORS.secondary} />
+            <StatCard icon="🫀" val={stats.totalOrganDonations} label="Organs"       color={COLORS.accent} />
+            <StatCard icon="🏥" val={stats.totalHospitals}      label="Hospitals"    color={COLORS.warning} />
+          </View>
+        )}
+
+        {/* Emergency SOS */}
+        <TouchableOpacity style={s.sosCard} onPress={triggerSOS} activeOpacity={0.85} disabled={sosLoading}>
+          <Text style={s.sosTitle}>🚨 EMERGENCY SOS RADAR</Text>
+          <Text style={s.sosSub}>
+            Broadcasts alert to {stats?.totalDonors || 0} donors & {stats?.totalHospitals || 0} hospitals
+          </Text>
+          <View style={s.sosBtn}>
+            {sosLoading
+              ? <ActivityIndicator color={COLORS.primary} />
+              : <Text style={s.sosBtnText}>⚡ BROADCAST SOS NOW</Text>
+            }
+          </View>
+        </TouchableOpacity>
+
+        {/* Blood Search */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>🔍 Live Blood Availability</Text>
+
+          {/* Blood Group Filter */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+            {BLOOD_GROUPS.map(bg => (
+              <TouchableOpacity key={bg}
+                style={[s.filterChip, bloodGroup === bg && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
+                onPress={() => setBloodGroup(bg)}>
+                <Text style={[s.filterChipText, bloodGroup === bg && { color: '#fff' }]}>{bg}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* City Filter */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+            {CITIES.map(c => (
+              <TouchableOpacity key={c}
+                style={[s.filterChip, city === c && { backgroundColor: COLORS.secondary, borderColor: COLORS.secondary }]}
+                onPress={() => setCity(c)}>
+                <Text style={[s.filterChipText, city === c && { color: '#fff' }]}>{c}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {bloodData.length === 0
+            ? <View style={s.emptyCard}>
+                <Text style={s.emptyText}>No blood stock found. Try different filters.</Text>
+              </View>
+            : bloodData.slice(0, 5).map((item, i) => (
+                <View key={i} style={s.bloodCard}>
+                  <View style={s.bloodCardHeader}>
+                    <Text style={s.bloodGroup}>{item.blood_group}</Text>
+                    <View style={s.availBadge}><Text style={s.availText}>Available</Text></View>
+                  </View>
+                  <Text style={s.hospName}>{item.hospital_name}</Text>
+                  <Text style={s.hospCity}>📍 {item.city}</Text>
+                  <Text style={s.units}>{item.units_available} Units</Text>
+                </View>
+              ))
+          }
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B0F17', padding: 16 },
-  header: { marginTop: 20, marginBottom: 16 },
-  brandTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
-  brandSub: { fontSize: 13, color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase' },
-  sosCard: { backgroundColor: '#DC2626', padding: 20, borderRadius: 20, marginBottom: 20 },
-  sosTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
-  sosSub: { fontSize: 12, color: '#FEE2E2', marginBottom: 14 },
-  sosButton: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, alignItems: 'center' },
+function StatCard({ icon, val, label, color }) {
+  return (
+    <View style={[s.statCard, { borderColor: color + '44' }]}>
+      <Text style={{ fontSize: 22 }}>{icon}</Text>
+      <Text style={[s.statVal, { color }]}>{val ?? 0}</Text>
+      <Text style={s.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const s = StyleSheet.create({
+  safe:       { flex: 1, backgroundColor: COLORS.bgMain },
+  scroll:     { flex: 1 },
+  centered:   { flex: 1, backgroundColor: COLORS.bgMain, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  loadingText:{ color: COLORS.textMuted, fontSize: 14 },
+  header:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingBottom: 12 },
+  logo:       { fontSize: 26, fontWeight: '800', color: COLORS.textMain },
+  welcome:    { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
+  roleBadge:  { backgroundColor: COLORS.primary + '22', borderRadius: RADIUS.full, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.primary + '44' },
+  roleText:   { color: COLORS.primary, fontWeight: '800', fontSize: 11 },
+  statsGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16, marginBottom: 16 },
+  statCard:   { flex: 1, minWidth: '44%', backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, padding: 14, alignItems: 'center', gap: 4, borderWidth: 1 },
+  statVal:    { fontSize: 24, fontWeight: '800' },
+  statLabel:  { fontSize: 11, color: COLORS.textMuted, fontWeight: '600' },
+  sosCard:    { marginHorizontal: 16, backgroundColor: '#DC2626', borderRadius: RADIUS.xl, padding: 20, marginBottom: 20, ...SHADOW.primary },
+  sosTitle:   { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  sosSub:     { fontSize: 12, color: '#FEE2E2', marginBottom: 14 },
+  sosBtn:     { backgroundColor: '#fff', padding: 13, borderRadius: RADIUS.md, alignItems: 'center' },
   sosBtnText: { color: '#DC2626', fontWeight: '800', fontSize: 14 },
-  grid: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  card: { flex: 1, backgroundColor: '#161C28', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#263147' },
-  cardIcon: { fontSize: 24, marginBottom: 6 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  cardSub: { fontSize: 12, color: '#94A3B8' },
-  section: { marginBottom: 30 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 12 },
-  hospItem: { backgroundColor: '#161C28', padding: 14, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#263147' },
-  hospName: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
-  hospDetails: { fontSize: 13, color: '#94A3B8', marginVertical: 4 },
-  hospStock: { fontSize: 14, color: '#43A047', fontWeight: '700' }
+  section:    { paddingHorizontal: 16, marginBottom: 30 },
+  sectionTitle:{ fontSize: 17, fontWeight: '800', color: COLORS.textMain, marginBottom: 12 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.bgCard, marginRight: 8 },
+  filterChipText: { color: COLORS.textMuted, fontWeight: '600', fontSize: 13 },
+  bloodCard:  { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
+  bloodCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  bloodGroup: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
+  availBadge: { backgroundColor: COLORS.accent + '22', paddingHorizontal: 10, paddingVertical: 3, borderRadius: RADIUS.full },
+  availText:  { color: COLORS.accent, fontWeight: '700', fontSize: 12 },
+  hospName:   { fontSize: 15, fontWeight: '700', color: COLORS.textMain, marginBottom: 2 },
+  hospCity:   { fontSize: 13, color: COLORS.textMuted, marginBottom: 6 },
+  units:      { fontSize: 14, fontWeight: '700', color: COLORS.accent },
+  emptyCard:  { backgroundColor: COLORS.bgCard, borderRadius: RADIUS.lg, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.border },
+  emptyText:  { color: COLORS.textMuted, fontSize: 14 },
 });

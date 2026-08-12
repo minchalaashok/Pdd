@@ -55,8 +55,8 @@ async function seedDatabase() {
 
     const uRes = await run(
       `INSERT INTO Users (full_name, email, password_hash, role, phone, city, state, is_verified)
-       VALUES (?, ?, ?, 'hospital', ?, ?, 'State', 1)`,
-      [hName, email, passwordHash, `+91 91234${String(10000 + i)}`, cityName]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [hName, email, passwordHash, 'hospital', `+91 91234${String(10000 + i)}`, cityName, 'State', 1]
     );
     hospitalUserIds.push(uRes.id);
 
@@ -92,8 +92,8 @@ async function seedDatabase() {
 
       await run(
         `INSERT INTO BloodInventory (hospital_id, blood_group, units_available, expiry_date, status)
-         VALUES (?, ?, ?, ?, 'AVAILABLE')`,
-        [hId, bg, units, expDate.toISOString().split('T')[0]]
+         VALUES (?, ?, ?, ?, ?)`,
+        [hId, bg, units, expDate.toISOString().split('T')[0], 'AVAILABLE']
       );
     }
 
@@ -122,8 +122,8 @@ async function seedDatabase() {
 
     const uRes = await run(
       `INSERT INTO Users (full_name, email, password_hash, role, phone, city, state, is_verified)
-       VALUES (?, ?, ?, 'donor', ?, ?, 'State', 1)`,
-      [`${fn} ${ln}`, email, passwordHash, `+91 98${String(1000000 + i)}`, city]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`${fn} ${ln}`, email, passwordHash, 'donor', `+91 98${String(1000000 + i)}`, city, 'State', 1]
     );
     donorUserIds.push(uRes.id);
 
@@ -163,8 +163,8 @@ async function seedDatabase() {
 
     const uRes = await run(
       `INSERT INTO Users (full_name, email, password_hash, role, phone, city, state, is_verified)
-       VALUES (?, ?, ?, 'receiver', ?, ?, 'State', 1)`,
-      [`${fn} ${ln}`, email, passwordHash, `+91 97${String(1000000 + i)}`, city]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`${fn} ${ln}`, email, passwordHash, 'receiver', `+91 97${String(1000000 + i)}`, city, 'State', 1]
     );
     receiverUserIds.push(uRes.id);
 
@@ -190,8 +190,8 @@ async function seedDatabase() {
   for (let i = 1; i <= 30; i++) {
     await run(
       `INSERT INTO Users (full_name, email, password_hash, role, phone, city, state, is_verified)
-       VALUES (?, ?, ?, 'donor', ?, ?, 'State', 1)`,
-      [`Extra User ${i}`, `user${i}@lifelink.org`, passwordHash, `+91 96000${String(10000 + i)}`, 'Mumbai']
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [`Extra User ${i}`, `user${i}@lifelink.org`, passwordHash, 'donor', `+91 96000${String(10000 + i)}`, 'Mumbai', 'State', 1]
     );
   }
   console.log('✅ Added extra users for 500+ total user count.');
@@ -230,8 +230,8 @@ async function seedDatabase() {
 
     await run(
       `INSERT INTO Donations (donor_id, request_id, hospital_id, type, item_name, units, donation_date, status)
-       VALUES (?, ?, ?, 'BLOOD', ?, ?, ?, 'COMPLETED')`,
-      [dId, requestIds[i % requestIds.length], hId, bg, Math.floor(Math.random() * 2) + 1, dDate]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [dId, requestIds[i % requestIds.length], hId, 'BLOOD', bg, Math.floor(Math.random() * 2) + 1, dDate, 'COMPLETED']
     );
     donationCount++;
   }
@@ -247,8 +247,8 @@ async function seedDatabase() {
 
     await run(
       `INSERT INTO Donations (donor_id, request_id, hospital_id, type, item_name, units, donation_date, status)
-       VALUES (?, ?, ?, 'ORGAN', ?, 1, ?, 'COMPLETED')`,
-      [dId, requestIds[i % requestIds.length], hId, organ, dDate]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [dId, requestIds[i % requestIds.length], hId, 'ORGAN', organ, 1, dDate, 'COMPLETED']
     );
     organCount++;
   }
@@ -260,8 +260,8 @@ async function seedDatabase() {
     const city = CITIES[i % CITIES.length];
     await run(
       `INSERT INTO Campaigns (hospital_id, title, description, location, start_date, end_date, target_units, collected_units, status)
-       VALUES (?, ?, ?, ?, '2026-08-01', '2026-08-30', ?, ?, 'ACTIVE')`,
-      [hId, `Mega Blood Drive 2026 - ${city}`, `Join the life-saving movement in ${city}. Free health checkup included.`, `${city} Town Center`, 250, 180]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [hId, `Mega Blood Drive 2026 - ${city}`, `Join the life-saving movement in ${city}. Free health checkup included.`, `${city} Town Center`, '2026-08-01', '2026-08-30', 250, 180, 'ACTIVE']
     );
   }
 
