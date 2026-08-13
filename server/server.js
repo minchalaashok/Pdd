@@ -40,6 +40,7 @@ const ALLOWED_ORIGINS = [
   'capacitor://localhost',
   /^https:\/\/.*\.vercel\.app$/,
   /^https:\/\/.*\.loca\.lt$/,
+  /^https:\/\/.*\.onrender\.com$/,
 ];
 
 app.use(cors({
