@@ -35,6 +35,9 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
+  'https://localhost',
+  'http://localhost',
+  'capacitor://localhost',
   /^https:\/\/.*\.vercel\.app$/,
   /^https:\/\/.*\.loca\.lt$/,
 ];
@@ -117,6 +120,10 @@ app.get('/api/health', (req, res) => {
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString()
   });
+});
+
+app.get('/download-apk', (req, res) => {
+  res.download(path.join(__dirname, '..', 'LifeLink-app-debug.apk'), 'LifeLink.apk');
 });
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
