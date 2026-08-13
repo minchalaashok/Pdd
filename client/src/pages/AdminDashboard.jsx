@@ -263,23 +263,6 @@ export const AdminDashboard = () => {
                 </div>
               ))}
             </div>
-
-            {/* Charts Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20, marginBottom: 28 }}>
-              <div className="glass-card" style={{ padding: 20 }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>📈 Monthly Donation Trends</h4>
-                <Line data={lineChartData} options={{ responsive: true, plugins: { legend: { position: 'top' } } }} />
-              </div>
-              <div className="glass-card" style={{ padding: 20 }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>🩸 Blood Group Ratio</h4>
-                <Pie data={pieChartData} />
-              </div>
-            </div>
-
-            <div className="glass-card" style={{ padding: 20 }}>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 16 }}>🏥 Top Performing Partner Hospitals</h4>
-              <Bar data={barChartData} />
-            </div>
           </>
         )}
 
