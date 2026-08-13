@@ -38,6 +38,8 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'http://localhost',
   'capacitor://localhost',
+  'https://pdd-2-ld6v.onrender.com',
+  'https://pdd-1-we4e.onrender.com',
   /^https:\/\/.*\.vercel\.app$/,
   /^https:\/\/.*\.loca\.lt$/,
   /^https:\/\/.*\.onrender\.com$/,
