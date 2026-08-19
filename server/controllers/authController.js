@@ -116,8 +116,8 @@ const register = async (req, res) => {
     } else if (role === 'hospital') {
       await run(
         `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
-         VALUES (?, ?, ?, ?, ?, ?, 0)`,
-        [userId, hospital_name || full_name, license_number || `LIC-${Date.now()}`, city || 'Mumbai', 'Hospital Address', phone || '']
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [userId, hospital_name || full_name, license_number || `LIC-${Date.now()}`, city || 'Mumbai', 'Hospital Address', phone || '', 1]
       );
     }
 
