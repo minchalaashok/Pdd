@@ -11,12 +11,14 @@ const getHospitalPatients = async (req, res) => {
        FROM Receivers r
        JOIN Users u ON r.user_id = u.id
        LEFT JOIN Hospitals h ON r.city = h.city
-       WHERE r.status = 'ACTIVE'
-       ORDER BY CASE r.urgency_level
-         WHEN 'CRITICAL' THEN 1
-         WHEN 'HIGH' THEN 2
-         WHEN 'MEDIUM' THEN 3
-         ELSE 4 END, r.id DESC LIMIT 40`
+       ORDER BY CASE r.status
+         WHEN 'ACTIVE' THEN 1
+         ELSE 2 END,
+         CASE r.urgency_level
+           WHEN 'CRITICAL' THEN 1
+           WHEN 'HIGH' THEN 2
+           WHEN 'MEDIUM' THEN 3
+           ELSE 4 END, r.id DESC LIMIT 40`
     );
 
     res.json({ success: true, count: patients.length, patients });
@@ -39,15 +41,15 @@ const registerPatient = async (req, res) => {
     if (!user) {
       user = await run(
         `INSERT INTO Users (full_name, email, password_hash, role, phone, city, is_verified)
-         VALUES (?, ?, 'TEMP_HASH_PATIENT', 'receiver', ?, ?, 1)`,
-        [full_name, email, phone || '+91 9876500000', city || 'Mumbai']
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [full_name, email, 'TEMP_HASH_PATIENT', 'receiver', phone || '+91 9876500000', city || 'Mumbai', 1]
       );
     }
 
     const rRes = await run(
       `INSERT INTO Receivers (user_id, blood_group_needed, organ_needed, urgency_level, city, medical_doc_url, gender, age, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')`,
-      [user.id, blood_group_needed || 'O+', organ_needed || 'Kidney', urgency_level || 'HIGH', city || 'Mumbai', medical_doc_url || 'https://lifelink.org/docs/prescription_sample.pdf', gender || 'Male', age || 35]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [user.id, blood_group_needed || 'O+', organ_needed || 'Kidney', urgency_level || 'HIGH', city || 'Mumbai', medical_doc_url || 'https://lifelink.org/docs/prescription_sample.pdf', gender || 'Male', age || 35, 'ACTIVE']
     );
 
     res.status(201).json({
@@ -95,8 +97,26 @@ const updateSurgeryStatus = async (req, res) => {
   }
 };
 
+const updatePatientStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    await run('UPDATE Receivers SET status = ? WHERE id = ?', [status, id]);
+
+    res.json({ success: true, message: `Patient status updated to ${status}` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to update patient status' });
+  }
+};
+
 module.exports = {
   getHospitalPatients,
   registerPatient,
-  updateSurgeryStatus
+  updateSurgeryStatus,
+  updatePatientStatus
 };

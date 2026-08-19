@@ -56,7 +56,7 @@ export const LandingPage = ({ onOpenSos, onOpenQr, onSwitchTab, onOpenSignIn, on
             style={{ fontSize: '1.05rem', padding: '14px 32px', boxShadow: '0 8px 28px rgba(229,57,53,0.4)' }}
             onClick={onOpenSignUp}
           >
-            ✨ Join as Donor / Patient <ChevronRight size={18} />
+            ✨ Join LifeLink / Pledge Now <ChevronRight size={18} />
           </button>
           <button
             className="btn-outline"
@@ -67,18 +67,6 @@ export const LandingPage = ({ onOpenSos, onOpenQr, onSwitchTab, onOpenSignIn, on
           </button>
           <button className="btn-sos" style={{ fontSize: '1.05rem', padding: '14px 24px' }} onClick={onOpenSos}>
             <PhoneCall size={18} /> SOS Emergency
-          </button>
-        </div>
-        {/* Secondary actions */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
-          <button className="btn-outline" style={{ fontSize: '0.88rem', padding: '9px 18px' }} onClick={() => onSwitchTab('admin')}>
-            📊 Admin Dashboard
-          </button>
-          <button className="btn-outline" style={{ fontSize: '0.88rem', padding: '9px 18px' }} onClick={() => onSwitchTab('hospital')}>
-            🏥 Hospital Portal
-          </button>
-          <button className="btn-outline" style={{ fontSize: '0.88rem', padding: '9px 18px' }} onClick={() => onSwitchTab('mobile')}>
-            📱 Mobile App Preview
           </button>
         </div>
 

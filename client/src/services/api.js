@@ -7,7 +7,12 @@
 
 // In dev: uses http://localhost:5000/api
 // In production (Vercel): uses VITE_API_URL from .env.production
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// If running in a web browser on localhost, default to local backend directly
+if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+  API_BASE_URL = 'http://localhost:5000/api';
+}
 
 export { API_BASE_URL };
 

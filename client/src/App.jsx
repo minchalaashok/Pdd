@@ -24,7 +24,7 @@ export function AppContent() {
   const [isAiBotOpen, setIsAiBotOpen] = useState(false);
 
   // Auth pages: 'signin' | 'signup' | null (no auth page)
-  const [authPage, setAuthPage] = useState(null);
+  const [authPage, setAuthPage] = useState('signup');
 
   const handleAuthSuccess = (role) => {
     setAuthPage(null);
@@ -41,6 +41,7 @@ export function AppContent() {
         <SignInPage
           onSwitchToSignUp={() => setAuthPage('signup')}
           onSuccess={handleAuthSuccess}
+          onBackToHome={() => setAuthPage(null)}
         />
       </ErrorBoundary>
     );
@@ -52,6 +53,7 @@ export function AppContent() {
         <SignUpPage
           onSwitchToSignIn={() => setAuthPage('signin')}
           onSuccess={handleAuthSuccess}
+          onBackToHome={() => setAuthPage(null)}
         />
       </ErrorBoundary>
     );

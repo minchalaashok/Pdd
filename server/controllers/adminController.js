@@ -186,15 +186,32 @@ const getHospitals = async (req, res) => {
 const updateHospitalStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { is_approved } = req.body; // 1 Approved, 2 Rejected
+    const { is_approved } = req.body; // 0: PENDING, 1: APPROVED, 2: REJECTED, 3: UNDER REVIEW, 4: SUSPENDED
+
+    const statusMap = {
+      0: 'PENDING',
+      1: 'APPROVED',
+      2: 'REJECTED',
+      3: 'UNDER REVIEW',
+      4: 'SUSPENDED'
+    };
+
+    const statusName = statusMap[is_approved] || 'UNKNOWN';
 
     await run('UPDATE Hospitals SET is_approved = ? WHERE id = ?', [is_approved, id]);
 
+    // Determine audit action name
+    let action = 'HOSPITAL_STATUS_UPDATE';
+    if (is_approved === 1) action = 'HOSPITAL_APPROVE';
+    else if (is_approved === 2) action = 'HOSPITAL_REJECT';
+    else if (is_approved === 3) action = 'HOSPITAL_REVIEW';
+    else if (is_approved === 4) action = 'HOSPITAL_SUSPEND';
+
     await run('INSERT INTO AuditLogs (user_id, action, target, details) VALUES (?, ?, ?, ?)', [
       req.user.id,
-      is_approved === 1 ? 'HOSPITAL_APPROVE' : 'HOSPITAL_REJECT',
+      action,
       `Hospital #${id}`,
-      `Updated hospital #${id} status to ${is_approved === 1 ? 'Approved' : 'Rejected'}`
+      `Updated hospital #${id} status to ${statusName}`
     ]);
 
     // Broadcast hospital status change so all dashboard clients refresh partner hospitals count
@@ -203,12 +220,12 @@ const updateHospitalStatus = async (req, res) => {
       broadcast('HOSPITAL_STATUS_UPDATED', {
         hospitalId: id,
         is_approved,
-        title: is_approved === 1 ? '🏥 Hospital Approved' : '❌ Hospital Rejected',
-        message: `Hospital #${id} has been ${is_approved === 1 ? 'approved as a partner' : 'rejected'}`
+        title: `🏥 Hospital ${statusName}`,
+        message: `Hospital #${id} status has been updated to ${statusName}`
       });
     }
 
-    res.json({ success: true, message: `Hospital status updated to ${is_approved === 1 ? 'Approved' : 'Rejected'}` });
+    res.json({ success: true, message: `Hospital status updated to ${statusName}` });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to update hospital status' });
   }

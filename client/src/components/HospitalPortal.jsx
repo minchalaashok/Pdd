@@ -2,11 +2,86 @@ import React, { useState, useEffect } from 'react';
 import { Building2, Droplet, Heart, Users, Activity, CheckCircle, Clock, AlertTriangle, Plus, Search, ShieldCheck, RefreshCw } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useRealtime } from '../context/RealtimeContext';
+import { useAuth } from '../context/AuthContext';
 
 export const HospitalPortal = () => {
+  const { user } = useAuth();
   const { refreshVersion } = useRealtime();
-  const [activeTab, setActiveTab] = useState('inventory');
+  const [activeTab, setActiveTab] = useState('donors');
+
+  if (user?.hospital?.is_approved !== 1) {
+    const statusMap = {
+      0: { title: 'Verification Pending', icon: <Clock size={48} color="#FB8C00" />, desc: 'Your hospital registration request has been received. Our higher authority/admin is currently verifying your license and credentials.', badge: 'PENDING' },
+      2: { title: 'Registration Rejected', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'We regret to inform you that your registration request was rejected. Please verify your details or contact admin support.', badge: 'REJECTED' },
+      3: { title: 'Credentials Under Review', icon: <RefreshCw size={48} color="#1976D2" />, desc: 'Your documents are actively being reviewed. This process normally takes up to 24-48 business hours.', badge: 'UNDER REVIEW' },
+      4: { title: 'Account Suspended', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'Your account access has been suspended due to policy violations. Please contact the administrator.', badge: 'SUSPENDED' }
+    };
+
+    const currentStatus = statusMap[user?.hospital?.is_approved] || statusMap[0];
+
+    return (
+      <div style={{ maxWidth: 600, margin: '80px auto', padding: '40px 24px', textAlign: 'center' }} className="glass-card">
+        <div style={{ display: 'inline-flex', padding: 20, borderRadius: '50%', background: 'var(--bg-main)', marginBottom: 20 }}>
+          {currentStatus.icon}
+        </div>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12 }}>{currentStatus.title}</h2>
+        <span className="badge badge-warning" style={{ display: 'inline-block', marginBottom: 20, fontSize: '0.8rem', padding: '6px 12px' }}>
+          STATUS: {currentStatus.badge}
+        </span>
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.95rem', marginBottom: 24 }}>
+          {currentStatus.desc}
+        </p>
+        <div style={{ padding: '16px', background: 'rgba(229,57,53,0.05)', borderRadius: 10, border: '1px dashed rgba(229,57,53,0.2)', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+          🔒 <strong>Security Restriction:</strong> Your hospital account is not currently authorized to access donor information, search donor directory, or create active transplantation requests.
+        </div>
+      </div>
+    );
+  }
   
+  // Donors directory state
+  const [donorsList, setDonorsList] = useState([]);
+  const [searchBg, setSearchBg] = useState('ALL');
+  const [searchOrgan, setSearchOrgan] = useState('ALL');
+  const [searchCity, setSearchCity] = useState('ALL');
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // Chat state
+  const [activeChatDonor, setActiveChatDonor] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [newChatMessage, setNewChatMessage] = useState('');
+
+  useEffect(() => {
+    if (!activeChatDonor) return;
+    const fetchChat = async () => {
+      const res = await fetchApi(`/chat/${activeChatDonor.user_id}`);
+      if (res.success) {
+        setChatMessages(res.messages || []);
+      }
+    };
+    fetchChat();
+    const interval = setInterval(fetchChat, 3000);
+    return () => clearInterval(interval);
+  }, [activeChatDonor]);
+
+  const handleSendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!newChatMessage.trim() || !activeChatDonor) return;
+    const res = await fetchApi('/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        receiver_id: activeChatDonor.user_id,
+        message: newChatMessage
+      })
+    });
+    if (res.success) {
+      setNewChatMessage('');
+      const chatRes = await fetchApi(`/chat/${activeChatDonor.user_id}`);
+      if (chatRes.success) {
+        setChatMessages(chatRes.messages || []);
+      }
+    }
+  };
+
   // Inventory state
   const [bloodStock, setBloodStock] = useState([]);
   const [organStock, setOrganStock] = useState([]);
@@ -54,17 +129,36 @@ export const HospitalPortal = () => {
     // Load requests for surgery tracking
     const rRes = await fetchApi('/requests');
     if (rRes.success) setRequests(rRes.requests || []);
+
+    // Load donors list
+    loadDonors();
+  };
+
+  const loadDonors = async () => {
+    setSearchLoading(true);
+    const res = await fetchApi(`/donors/search?blood_group=${searchBg}&organ=${searchOrgan}&city=${searchCity}`);
+    if (res.success) {
+      setDonorsList(res.donors || []);
+    }
+    setSearchLoading(false);
   };
 
   useEffect(() => {
     loadData();
+    // Fallback polling: refresh live data every 5 seconds
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
   }, [refreshVersion]);
+
+  useEffect(() => {
+    loadDonors();
+  }, [searchBg, searchOrgan, searchCity]);
 
   const handleUpdateStock = async (e) => {
     e.preventDefault();
     const res = await fetchApi('/hospital/stock', {
       method: 'POST',
-      body: JSON.stringify({ hospital_id: 1, blood_group: updateBg, units_available: Number(updateUnits) })
+      body: JSON.stringify({ hospital_id: user?.hospital?.id || 1, blood_group: updateBg, units_available: Number(updateUnits) })
     });
     if (res.success) {
       setStockMsg(`Updated ${updateBg} stock to ${updateUnits} units successfully.`);
@@ -114,6 +208,14 @@ export const HospitalPortal = () => {
     loadData();
   };
 
+  const handleUpdatePatientStatus = async (patientId, newStatus) => {
+    await fetchApi(`/hospital/patients/${patientId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: newStatus })
+    });
+    loadData();
+  };
+
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
       
@@ -122,9 +224,13 @@ export const HospitalPortal = () => {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <Building2 size={28} color="var(--primary)" />
-            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)' }}>Apex Multi-Specialty Hospital Portal</h2>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              {user?.hospital?.hospital_name || user?.full_name || 'Hospital'} Portal
+            </h2>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>Verified Hospital License: LIC-MED-2026-1001 • Ward 4 Emergency Transplants</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+            Verified Hospital License: {user?.hospital?.license_number || 'Pending'} • Ward 4 Emergency Transplants
+          </p>
         </div>
 
         <button className="btn-secondary" onClick={loadData} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -134,6 +240,12 @@ export const HospitalPortal = () => {
 
       {/* Portal Tabs */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+        <button
+          className={activeTab === 'donors' ? 'btn-primary' : 'btn-outline'}
+          onClick={() => setActiveTab('donors')}
+        >
+          🔍 Search & Match Donors
+        </button>
         <button
           className={activeTab === 'inventory' ? 'btn-primary' : 'btn-outline'}
           onClick={() => setActiveTab('inventory')}
@@ -146,12 +258,7 @@ export const HospitalPortal = () => {
         >
           📋 Patient Waiting List ({patients.length})
         </button>
-        <button
-          className={activeTab === 'aimatch' ? 'btn-primary' : 'btn-outline'}
-          onClick={() => { setActiveTab('aimatch'); handleRunAiMatching(); }}
-        >
-          🧠 AI Donor Matching Engine
-        </button>
+
         <button
           className={activeTab === 'surgeries' ? 'btn-primary' : 'btn-outline'}
           onClick={() => setActiveTab('surgeries')}
@@ -343,7 +450,18 @@ export const HospitalPortal = () => {
                       </span>
                     </td>
                     <td style={{ padding: 12 }}>{p.city}</td>
-                    <td style={{ padding: 12 }}><span className="badge badge-success">{p.status}</span></td>
+                    <td style={{ padding: 12 }}>
+                      <select
+                        className="form-input"
+                        style={{ padding: '4px 8px', fontSize: '0.82rem', width: '130px', background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border)', borderRadius: '6px' }}
+                        value={p.status}
+                        onChange={(e) => handleUpdatePatientStatus(p.id, e.target.value)}
+                      >
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="COMPLETED">COMPLETED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -352,78 +470,90 @@ export const HospitalPortal = () => {
         </div>
       )}
 
-      {/* TAB 3: AI Donor Matching Engine */}
-      {activeTab === 'aimatch' && (
+      {/* TAB: Donors Directory */}
+      {activeTab === 'donors' && (
         <div>
+          {/* Search Filters Row */}
           <div className="glass-card" style={{ padding: 24, marginBottom: 32 }}>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-              🧠 LifeLink AI-Powered Organ & Blood Matching Algorithm
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 20 }}>
-              Calculates donor-recipient compatibility score based on blood group matrix (ABO/Rh), organ tissue compatibility, location proximity, and donor health score.
-            </p>
-
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>Search Registered Donors Directory</h3>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Blood Group Needed</label>
-                <select className="form-input" style={{ width: 140 }} value={selectedBgMatch} onChange={e => setSelectedBgMatch(e.target.value)}>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Blood Group</label>
+                <select className="form-input" style={{ width: 140 }} value={searchBg} onChange={e => setSearchBg(e.target.value)}>
+                  <option value="ALL">All Groups</option>
                   {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
                     <option key={bg} value={bg}>{bg}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Organ Required</label>
-                <select className="form-input" style={{ width: 160 }} value={selectedOrganMatch} onChange={e => setSelectedOrganMatch(e.target.value)}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Organ Available</label>
+                <select className="form-input" style={{ width: 160 }} value={searchOrgan} onChange={e => setSearchOrgan(e.target.value)}>
+                  <option value="ALL">All Organs</option>
                   {['Kidney', 'Liver', 'Heart', 'Lungs', 'Pancreas', 'Eyes', 'Bone Marrow', 'Skin'].map(org => (
                     <option key={org} value={org}>{org}</option>
                   ))}
                 </select>
               </div>
 
-              <button className="btn-primary" style={{ marginTop: 20 }} onClick={handleRunAiMatching} disabled={matchingLoading}>
-                {matchingLoading ? 'Analyzing AI Compatibility...' : 'Run AI Donor Match Search'}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Location (City)</label>
+                <select className="form-input" style={{ width: 160 }} value={searchCity} onChange={e => setSearchCity(e.target.value)}>
+                  <option value="ALL">All Cities</option>
+                  {['Mumbai', 'Bangalore', 'Delhi', 'Hyderabad', 'Pune', 'Chennai'].map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button className="btn-primary" style={{ marginTop: 22 }} onClick={loadDonors} disabled={searchLoading}>
+                {searchLoading ? 'Searching...' : '🔍 Refresh Directory'}
               </button>
+
             </div>
           </div>
 
-          {/* AI Matched Donor Results */}
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>AI Compatibility Recommendations</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-            {matchedDonors.map((donor, idx) => (
-              <div key={idx} className="glass-card" style={{ padding: 20, position: 'relative', borderTop: `4px solid ${donor.matchScore > 80 ? '#10B981' : '#F59E0B'}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <div>
-                    <h4 style={{ fontWeight: 800, fontSize: '1.1rem' }}>{donor.full_name}</h4>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>📍 {donor.city} • {donor.estimatedDistanceKm} km away</span>
+          {/* Donors List Grid */}
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>Available Donors Match List</h3>
+          {donorsList.length === 0 ? (
+            <div className="glass-card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No registered donors found matching these filter criteria.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+              {donorsList.map(donor => (
+                <div key={donor.id} className="glass-card" style={{ padding: 20, borderLeft: '4px solid var(--secondary)', position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <h4 style={{ fontWeight: 800, fontSize: '1.15rem' }}>{donor.full_name}</h4>
+                    <span className={`badge ${donor.availability_status === 'AVAILABLE' ? 'badge-success' : 'badge-warning'}`}>
+                      {donor.availability_status}
+                    </span>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: donor.matchScore > 80 ? '#10B981' : '#F59E0B' }}>
-                      {donor.matchScore}%
-                    </div>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)' }}>MATCH SCORE</div>
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                    <span className="badge badge-danger">Blood Group: {donor.blood_group}</span>
+                    <span className="badge badge-info">Organ: {donor.organs_registered || 'Kidney'}</span>
                   </div>
-                </div>
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                  <span className="badge badge-danger">Blood: {donor.blood_group}</span>
-                  <span className="badge badge-info">Organs: {donor.organs_registered || 'Kidney'}</span>
-                  <span className="badge badge-success">{donor.compatibilityTier} MATCH</span>
-                </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div>📍 Location: <strong>{donor.city}, {donor.state || 'Maharashtra'}</strong></div>
+                    <div>📞 Phone: <strong>{donor.phone || 'N/A'}</strong></div>
+                    <div>✉️ Email: <strong>{donor.email}</strong></div>
+                  </div>
 
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-                  Contact: <strong>{donor.phone}</strong> • Total Donations: <strong>{donor.total_donations}</strong>
+                  <button className="btn-primary" style={{ width: '100%', fontSize: '0.88rem' }} onClick={() => setActiveChatDonor(donor)}>
+                    Initiate Contact / Chat
+                  </button>
                 </div>
-
-                <button className="btn-primary" style={{ width: '100%', fontSize: '0.88rem' }} onClick={() => alert(`Transplant Request & Donor Match Notification sent to ${donor.full_name}!`)}>
-                  Initiate Transplant Contact
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+
 
       {/* TAB 4: Surgery & Transplant Tracker */}
       {activeTab === 'surgeries' && (
@@ -465,6 +595,80 @@ export const HospitalPortal = () => {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Chat Modal */}
+      {activeChatDonor && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, width: 380, height: 480,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 16, boxShadow: '0 12px 40px rgba(0,0,0,0.25)',
+          display: 'flex', flexDirection: 'column', zIndex: 1000, overflow: 'hidden'
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: '16px', background: 'var(--primary)', color: 'white',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          }}>
+            <div>
+              <div style={{ fontWeight: 800 }}>Chat with {activeChatDonor.full_name}</div>
+              <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>Blood Group: {activeChatDonor.blood_group}</div>
+            </div>
+            <button
+              onClick={() => setActiveChatDonor(null)}
+              style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 800 }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Messages area */}
+          <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: 'rgba(0,0,0,0.02)' }}>
+            {chatMessages.length === 0 ? (
+              <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: '0.88rem', textAlign: 'center' }}>
+                Say hello to start the donation conversation!
+              </div>
+            ) : (
+              chatMessages.map((msg) => {
+                const isMe = msg.sender_id === user.id;
+                return (
+                  <div key={msg.id} style={{
+                    alignSelf: isMe ? 'flex-end' : 'flex-start',
+                    maxWidth: '75%',
+                    background: isMe ? 'var(--primary)' : 'var(--bg-main)',
+                    color: isMe ? 'white' : 'var(--text-main)',
+                    padding: '10px 14px',
+                    borderRadius: 12,
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    fontSize: '0.88rem'
+                  }}>
+                    <div>{msg.message}</div>
+                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Input form */}
+          <form onSubmit={handleSendChatMessage} style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, background: 'var(--bg-card)' }}>
+            <input
+              type="text"
+              className="form-input"
+              value={newChatMessage}
+              onChange={(e) => setNewChatMessage(e.target.value)}
+              placeholder="Type your message here..."
+              style={{ flex: 1, borderRadius: 20, padding: '8px 16px' }}
+              required
+            />
+            <button type="submit" className="btn-primary" style={{ padding: '8px 16px', borderRadius: 20 }}>
+              Send
+            </button>
+          </form>
         </div>
       )}
 

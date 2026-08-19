@@ -14,7 +14,7 @@ const login = async (req, res) => {
 
     const user = await getOne('SELECT * FROM Users WHERE email = ?', [email.toLowerCase().trim()]);
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Email address not registered.' });
     }
 
     if (user.is_suspended === 1) {
@@ -27,7 +27,7 @@ const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Wrong password. Please try again.' });
     }
 
     // Fetch extra role details if applicable
@@ -104,14 +104,14 @@ const register = async (req, res) => {
     if (role === 'donor') {
       await run(
         `INSERT INTO Donors (user_id, blood_group, organs_registered, availability_status)
-         VALUES (?, ?, ?, 'AVAILABLE')`,
-        [userId, blood_group || 'O+', organs_registered || 'Kidney,Liver']
+         VALUES (?, ?, ?, ?)`,
+        [userId, blood_group || 'O+', organs_registered || 'Kidney,Liver', 'AVAILABLE']
       );
     } else if (role === 'receiver') {
       await run(
         `INSERT INTO Receivers (user_id, blood_group_needed, organ_needed, urgency_level, city)
-         VALUES (?, ?, ?, 'HIGH', ?)`,
-        [userId, blood_group || 'O+', organ_needed || 'Kidney', city || 'Mumbai']
+         VALUES (?, ?, ?, ?, ?)`,
+        [userId, blood_group || 'O+', organ_needed || 'Kidney', 'HIGH', city || 'Mumbai']
       );
     } else if (role === 'hospital') {
       await run(

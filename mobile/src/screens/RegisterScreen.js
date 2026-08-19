@@ -9,9 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import { COLORS, RADIUS, SHADOW } from '../theme/colors';
 
 const ROLES = [
-  { id: 'donor',    label: 'Blood / Organ Donor', icon: '🩸', desc: 'Register to donate and save lives', color: COLORS.primary },
-  { id: 'receiver', label: 'Patient / Receiver',  icon: '🤲', desc: 'Looking for organ or blood donation', color: COLORS.warning },
-  { id: 'hospital', label: 'Hospital / Blood Bank',icon: '🏥', desc: 'Hospital, clinic or blood bank', color: COLORS.secondary },
+  { id: 'donor',    label: 'Give Blood / Organs (Donor) 🩸', icon: '❤️', desc: 'Choose this to donate blood or organs to save others.', color: COLORS.primary },
+  { id: 'hospital', label: 'Hospital / Clinic Portal 🏥',icon: '🏢', desc: 'Choose this if you are representing a hospital or clinic.', color: COLORS.secondary },
 ];
 
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -58,6 +57,19 @@ export default function RegisterScreen({ navigation }) {
     <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+
+          {/* Navigation to Login */}
+          <TouchableOpacity 
+            style={{ 
+              alignSelf: 'flex-start', 
+              paddingVertical: 8, 
+              paddingHorizontal: 4, 
+              marginBottom: 10 
+            }} 
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={{ fontSize: 16, color: COLORS.primary, fontWeight: '700' }}>← Sign In</Text>
+          </TouchableOpacity>
 
           {/* Header */}
           <View style={s.header}>

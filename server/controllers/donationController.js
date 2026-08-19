@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const { query, getOne, run } = require('../config/db');
 
 // Search Donors with Advanced Filters
@@ -215,8 +216,8 @@ const updateBloodStock = async (req, res) => {
 
     if (existing) {
       await run(
-        'UPDATE BloodInventory SET units_available = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [units_available, existing.id]
+        'UPDATE BloodInventory SET units_available = ?, updated_at = ? WHERE id = ?',
+        [units_available, new Date().toISOString(), existing.id]
       );
     } else {
       await run(
@@ -241,6 +242,98 @@ const updateBloodStock = async (req, res) => {
   }
 };
 
+// Update Donor Preferences & Profile Details
+const updateDonorProfile = async (req, res) => {
+  try {
+    const {
+      full_name,
+      phone,
+      city,
+      state,
+      blood_group,
+      organs_registered,
+      availability_status,
+      current_password,
+      new_password
+    } = req.body;
+    const userId = req.user.id;
+
+    // Verify if user exists
+    const user = await getOne('SELECT * FROM Users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Verify if donor exists
+    const donor = await getOne('SELECT id FROM Donors WHERE user_id = ?', [userId]);
+
+    // Handle Password Change if requested
+    if (new_password) {
+      if (!current_password) {
+        return res.status(400).json({ success: false, message: 'Current password is required to set a new password' });
+      }
+      const isMatch = await bcrypt.compare(current_password, user.password_hash);
+      if (!isMatch) {
+        return res.status(400).json({ success: false, message: 'Current password does not match' });
+      }
+      const newHash = await bcrypt.hash(new_password, 10);
+      await run('UPDATE Users SET password_hash = ? WHERE id = ?', [newHash, userId]);
+    }
+
+    // Update Users table fields
+    const userUpdates = [];
+    const userParams = [];
+    if (full_name) { userUpdates.push('full_name = ?'); userParams.push(full_name.trim()); }
+    if (phone !== undefined) { userUpdates.push('phone = ?'); userParams.push(phone.trim()); }
+    if (city !== undefined) { userUpdates.push('city = ?'); userParams.push(city.trim()); }
+    if (state !== undefined) { userUpdates.push('state = ?'); userParams.push(state.trim()); }
+    if (blood_group !== undefined) { userUpdates.push('blood_group = ?'); userParams.push(blood_group.trim()); }
+
+    if (userUpdates.length > 0) {
+      userParams.push(userId);
+      await run(`UPDATE Users SET ${userUpdates.join(', ')} WHERE id = ?`, userParams);
+    }
+
+    // Update Donors table fields
+    if (donor) {
+      const donorUpdates = [];
+      const donorParams = [];
+      if (organs_registered !== undefined) { donorUpdates.push('organs_registered = ?'); donorParams.push(organs_registered); }
+      if (availability_status !== undefined) { donorUpdates.push('availability_status = ?'); donorParams.push(availability_status); }
+      if (blood_group !== undefined) { donorUpdates.push('blood_group = ?'); donorParams.push(blood_group); }
+      if (donorUpdates.length > 0) {
+        donorParams.push(donor.id);
+        await run(`UPDATE Donors SET ${donorUpdates.join(', ')} WHERE id = ?`, donorParams);
+      }
+    }
+
+    // Fetch fresh updated details
+    const updatedUser = await getOne('SELECT * FROM Users WHERE id = ?', [userId]);
+    const updatedDonor = donor ? await getOne('SELECT * FROM Donors WHERE id = ?', [donor.id]) : null;
+
+    res.json({
+      success: true,
+      message: 'Profile and settings updated successfully',
+      donor: updatedDonor,
+      user: {
+        id: updatedUser.id,
+        full_name: updatedUser.full_name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        phone: updatedUser.phone,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        blood_group: updatedUser.blood_group,
+        avatar_url: updatedUser.avatar_url,
+        donor: updatedDonor
+      }
+    });
+  } catch (error) {
+    console.error('Update donor profile error:', error);
+    res.status(500).json({ success: false, message: 'Server error updating profile' });
+  }
+};
+
 module.exports = {
   searchDonors,
   searchBlood,
@@ -248,5 +341,6 @@ module.exports = {
   createRequest,
   getRequests,
   updateRequestStatus,
-  updateBloodStock
+  updateBloodStock,
+  updateDonorProfile
 };

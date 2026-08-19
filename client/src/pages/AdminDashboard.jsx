@@ -418,19 +418,46 @@ export const AdminDashboard = () => {
                     <td style={{ padding: 12 }}>{h.city}</td>
                     <td style={{ padding: 12 }}>{h.phone}</td>
                     <td style={{ padding: 12 }}>
-                      <span className={`badge ${h.is_approved === 1 ? 'badge-success' : h.is_approved === 2 ? 'badge-danger' : 'badge-warning'}`}>
-                        {h.is_approved === 1 ? 'APPROVED' : h.is_approved === 2 ? 'REJECTED' : 'PENDING'}
+                      <span className={`badge ${
+                        h.is_approved === 1 ? 'badge-success' : 
+                        h.is_approved === 2 ? 'badge-danger' : 
+                        h.is_approved === 3 ? 'badge-info' : 
+                        h.is_approved === 4 ? 'badge-warning' : 
+                        'badge-warning'
+                      }`}>
+                        {
+                          h.is_approved === 1 ? 'APPROVED' : 
+                          h.is_approved === 2 ? 'REJECTED' : 
+                          h.is_approved === 3 ? 'UNDER REVIEW' : 
+                          h.is_approved === 4 ? 'SUSPENDED' : 
+                          'PENDING'
+                        }
                       </span>
                     </td>
-                    <td style={{ padding: 12, display: 'flex', gap: 8 }}>
-                      {h.is_approved !== 1 && (
-                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--accent)' }} onClick={() => handleHospitalApproval(h.id, 1)}>
-                          <Check size={14} /> Approve
+                    <td style={{ padding: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {h.is_approved !== 1 && h.is_approved !== 4 && (
+                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#10B981', borderColor: '#10B981' }} onClick={() => handleHospitalApproval(h.id, 1)}>
+                          <Check size={12} /> Approve
                         </button>
                       )}
-                      {h.is_approved !== 2 && (
-                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--primary)' }} onClick={() => handleHospitalApproval(h.id, 2)}>
-                          <X size={14} /> Reject
+                      {h.is_approved !== 3 && h.is_approved !== 1 && h.is_approved !== 4 && (
+                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#2563EB', borderColor: '#2563EB' }} onClick={() => handleHospitalApproval(h.id, 3)}>
+                          Review
+                        </button>
+                      )}
+                      {h.is_approved !== 2 && h.is_approved !== 1 && h.is_approved !== 4 && (
+                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#DC2626', borderColor: '#DC2626' }} onClick={() => handleHospitalApproval(h.id, 2)}>
+                          <X size={12} /> Reject
+                        </button>
+                      )}
+                      {h.is_approved === 1 && (
+                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#D97706', borderColor: '#D97706' }} onClick={() => handleHospitalApproval(h.id, 4)}>
+                          <Ban size={12} /> Suspend
+                        </button>
+                      )}
+                      {h.is_approved === 4 && (
+                        <button className="btn-outline" style={{ padding: '4px 8px', fontSize: '0.72rem', color: '#10B981', borderColor: '#10B981' }} onClick={() => handleHospitalApproval(h.id, 1)}>
+                          <Check size={12} /> Reactivate
                         </button>
                       )}
                     </td>

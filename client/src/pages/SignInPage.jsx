@@ -4,13 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { useRealtime } from '../context/RealtimeContext';
 
 const ROLES = [
-  { id: 'donor',    label: 'Donor',    icon: '🩸', color: '#E53935', demo: 'donor1@lifelink.org' },
-  { id: 'receiver', label: 'Receiver', icon: '🤲', color: '#FB8C00', demo: 'receiver1@lifelink.org' },
-  { id: 'hospital', label: 'Hospital', icon: '🏥', color: '#1976D2', demo: 'hospital1@lifelink.org' },
-  { id: 'admin',    label: 'Admin',    icon: '🛡️', color: '#43A047', demo: 'admin@lifelink.org' },
+  { id: 'donor',    label: 'Donor / Giver 🩸',    icon: '❤️', color: '#E53935', demo: 'donor1@lifelink.org' },
+  { id: 'hospital', label: 'Hospital Portal 🏥', icon: '🏢', color: '#1976D2', demo: 'hospital1@lifelink.org' },
 ];
 
-export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
+export const SignInPage = ({ onSwitchToSignUp, onSuccess, onBackToHome }) => {
   const { login } = useAuth();
   const { liveStats } = useRealtime();
   const [role, setRole]         = useState('donor');
@@ -227,6 +225,10 @@ export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Dummy inputs to intercept Chrome autofill */}
+            <input type="text" name="prevent_autofill_email" style={{ display: 'none' }} tabIndex="-1" readOnly />
+            <input type="password" name="prevent_autofill_pass" style={{ display: 'none' }} tabIndex="-1" readOnly />
+
             {/* Email */}
             <div>
               <label style={{ fontSize: '0.82rem', fontWeight: 700, display: 'block', marginBottom: 6 }}>Email Address</label>
@@ -235,10 +237,12 @@ export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
                 <input
                   className="input-focus"
                   type="email"
+                  name="username_fake_prevent"
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="you@lifelink.org"
+                  placeholder="Enter your email address"
+                  autoComplete="new-password"
                   style={{
                     width: '100%', padding: '12px 14px 12px 40px',
                     borderRadius: 10, border: '1.5px solid var(--border)',
@@ -257,10 +261,12 @@ export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
                 <input
                   className="input-focus"
                   type={showPass ? 'text' : 'password'}
+                  name="password_fake_prevent"
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
+                  autoComplete="new-password"
                   style={{
                     width: '100%', padding: '12px 44px 12px 40px',
                     borderRadius: 10, border: '1.5px solid var(--border)',
@@ -304,15 +310,33 @@ export const SignInPage = ({ onSwitchToSignUp, onSuccess }) => {
             </button>
           </form>
 
-          {/* Footer */}
-          <div style={{ textAlign: 'center', marginTop: 24, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-            Don't have an account?{' '}
-            <button
-              className="link-btn"
-              onClick={onSwitchToSignUp}
-              style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem', transition: 'all 0.2s' }}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', marginTop: 24 }}>
+            <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+              Don't have an account?{' '}
+              <button
+                className="link-btn"
+                onClick={onSwitchToSignUp}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem', transition: 'all 0.2s' }}
+              >
+                Create Account →
+              </button>
+            </div>
+            <button 
+              onClick={onBackToHome} 
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: 'var(--text-muted)', 
+                fontWeight: 700, 
+                cursor: 'pointer', 
+                fontSize: '0.88rem', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: 6,
+                transition: 'all 0.2s'
+              }}
             >
-              Create Account →
+              ← Back to Home Page
             </button>
           </div>
 

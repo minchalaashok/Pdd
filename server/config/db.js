@@ -40,6 +40,7 @@ function applyWhere(builder, sql, params) {
   const wm = finSql.match(/WHERE\s+(.+?)(?:\s+ORDER|\s+LIMIT|\s+GROUP|$)/is);
   if (!wm) return builder;
   for (const cond of wm[1].trim().split(/\s+AND\s+/i)) {
+    if (cond.trim() === '1=1') continue;
     const eq  = cond.match(/^(\w+)\s*=\s*'([^']*)'$/);
     const eqN = cond.match(/^(\w+)\s*=\s*(\d+)$/);
     const neq = cond.match(/^(\w+)\s*!=\s*'([^']*)'$/);

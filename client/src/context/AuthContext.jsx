@@ -192,7 +192,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      user, loading, isFirebaseActive, isSupabaseActive,
+      user, setUser, loading, isFirebaseActive, isSupabaseActive,
       login, loginAsDemo, register, logout
     }}>
       {children}

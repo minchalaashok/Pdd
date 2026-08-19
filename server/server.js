@@ -34,6 +34,8 @@ app.use(helmet({
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
   'http://localhost:3000',
   'https://localhost',
   'http://localhost',
@@ -295,5 +297,5 @@ server.listen(PORT, () => {
   console.log(`🔰 Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // Start live event simulator after a short delay
-  setTimeout(scheduleLiveEvent, 3000);
+  // setTimeout(scheduleLiveEvent, 3000);
 });

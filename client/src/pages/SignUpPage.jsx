@@ -5,31 +5,17 @@ import { useAuth } from '../context/AuthContext';
 const ROLES = [
   {
     id: 'donor',
-    label: 'Blood / Organ Donor',
-    icon: '🩸',
+    label: 'Give Blood / Organs (Donor) 🩸',
+    icon: '❤️',
     color: '#E53935',
-    desc: 'Register to donate blood or organs and save lives',
-  },
-  {
-    id: 'receiver',
-    label: 'Patient / Receiver',
-    icon: '🤲',
-    color: '#FB8C00',
-    desc: 'Looking for organ or blood donation',
+    desc: 'Choose this option if you want to donate blood or organs to save others.',
   },
   {
     id: 'hospital',
-    label: 'Hospital / Blood Bank',
-    icon: '🏥',
+    label: 'Hospital / Clinic Portal 🏥',
+    icon: '🏢',
     color: '#1976D2',
-    desc: 'Hospital, clinic or certified blood bank',
-  },
-  {
-    id: 'admin',
-    label: 'Admin / NGO',
-    icon: '🛡️',
-    color: '#43A047',
-    desc: 'Platform administrator or NGO partner',
+    desc: 'Choose this option if you are representing a hospital or medical clinic.',
   },
 ];
 
@@ -37,7 +23,7 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const ORGANS = ['Kidney', 'Liver', 'Heart', 'Lungs', 'Cornea', 'Pancreas', 'Bone Marrow'];
 const CITIES = ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad', 'Pune', 'Ahmedabad', 'Jaipur', 'Surat'];
 
-export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
+export const SignUpPage = ({ onSwitchToSignIn, onSuccess, onBackToHome }) => {
   const { register } = useAuth();
 
   const [step, setStep]                   = useState(1); // 1=role, 2=account, 3=details
@@ -247,10 +233,29 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
                 ))}
               </div>
 
-              <div style={{ textAlign: 'center', fontSize: '0.88rem', color: 'var(--text-muted)' }}>
-                Already have an account?{' '}
-                <button onClick={onSwitchToSignIn} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
-                  Sign In →
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', marginTop: 12 }}>
+                <div style={{ fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                  Already have an account?{' '}
+                  <button onClick={onSwitchToSignIn} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+                    Sign In →
+                  </button>
+                </div>
+                <button 
+                  onClick={onBackToHome} 
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: 'var(--text-muted)', 
+                    fontWeight: 700, 
+                    cursor: 'pointer', 
+                    fontSize: '0.88rem', 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: 6,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <ArrowLeft size={16} /> Back to Home Page
                 </button>
               </div>
             </div>
@@ -272,10 +277,10 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/* Full Name */}
                 <div>
-                  <label style={labelStyle}>Full Name</label>
+                  <label style={labelStyle}>{role === 'hospital' ? 'Hospital / Clinic Name' : 'Full Name'}</label>
                   <div style={{ position: 'relative' }}>
                     <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input className="input-field" style={inputStyle} type="text" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Dr. Arjun Sharma" />
+                    <input className="input-field" style={inputStyle} type="text" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder={role === 'hospital' ? 'Enter hospital full name' : 'Enter your full name'} autoComplete="off" />
                   </div>
                 </div>
 
@@ -284,7 +289,7 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
                   <label style={labelStyle}>Email Address</label>
                   <div style={{ position: 'relative' }}>
                     <Mail size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input className="input-field" style={inputStyle} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="arjun@example.com" />
+                    <input className="input-field" style={inputStyle} type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Enter your email address" autoComplete="new-email" />
                   </div>
                 </div>
 
@@ -293,7 +298,7 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
                   <label style={labelStyle}>Password</label>
                   <div style={{ position: 'relative' }}>
                     <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input className="input-field" style={{ ...inputStyle, paddingRight: 44 }} type={showPass ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" />
+                    <input className="input-field" style={{ ...inputStyle, paddingRight: 44 }} type={showPass ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 8 characters" autoComplete="new-password" />
                     <button type="button" onClick={() => setShowPass(!showPass)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -322,7 +327,7 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
                   <label style={labelStyle}>Confirm Password</label>
                   <div style={{ position: 'relative' }}>
                     <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input className="input-field" style={{ ...inputStyle, borderColor: confirmPass && confirmPass !== password ? '#E53935' : undefined }} type={showPass ? 'text' : 'password'} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Re-enter password" />
+                    <input className="input-field" style={{ ...inputStyle, borderColor: confirmPass && confirmPass !== password ? '#E53935' : undefined }} type={showPass ? 'text' : 'password'} required value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Re-enter password" autoComplete="new-password" />
                     {confirmPass && (
                       <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: '1rem' }}>
                         {confirmPass === password ? '✅' : '❌'}
@@ -364,7 +369,7 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
                     <label style={labelStyle}>Phone Number</label>
                     <div style={{ position: 'relative' }}>
                       <Phone size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                      <input className="input-field" style={inputStyle} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 9876543210" />
+                      <input className="input-field" style={inputStyle} type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter your phone number" />
                     </div>
                   </div>
                   <div>
@@ -378,23 +383,25 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess }) => {
                   </div>
                 </div>
 
-                {/* Blood Group (all roles) */}
-                <div>
-                  <label style={labelStyle}>Blood Group</label>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {BLOOD_GROUPS.map(bg => (
-                      <button key={bg} type="button" onClick={() => setBloodGroup(bg)} style={{
-                        padding: '6px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 700,
-                        border: `2px solid ${bloodGroup === bg ? '#E53935' : 'var(--border)'}`,
-                        background: bloodGroup === bg ? 'rgba(229,57,53,0.1)' : 'var(--bg-card)',
-                        color: bloodGroup === bg ? '#E53935' : 'var(--text-muted)',
-                        cursor: 'pointer', transition: 'all 0.15s ease',
-                      }}>
-                        {bg}
-                      </button>
-                    ))}
+                {/* Blood Group (only for donor and receiver) */}
+                {role !== 'hospital' && (
+                  <div>
+                    <label style={labelStyle}>Blood Group</label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {BLOOD_GROUPS.map(bg => (
+                        <button key={bg} type="button" onClick={() => setBloodGroup(bg)} style={{
+                          padding: '6px 14px', borderRadius: 20, fontSize: '0.82rem', fontWeight: 700,
+                          border: `2px solid ${bloodGroup === bg ? '#E53935' : 'var(--border)'}`,
+                          background: bloodGroup === bg ? 'rgba(229,57,53,0.1)' : 'var(--bg-card)',
+                          color: bloodGroup === bg ? '#E53935' : 'var(--text-muted)',
+                          cursor: 'pointer', transition: 'all 0.15s ease',
+                        }}>
+                          {bg}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Donor: Organs to donate */}
                 {role === 'donor' && (

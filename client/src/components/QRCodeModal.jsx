@@ -8,9 +8,120 @@ export const QRCodeModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const donorName = user?.full_name || 'Dr. Aarav Sharma';
-  const bloodGroup = user?.blood_group || 'O+';
-  const donorId = `LL-CARD-2026-${user?.id || 1084}`;
+  const donorName = user?.full_name || 'Donor';
+  const bloodGroup = user?.blood_group || user?.donor?.blood_group || 'O+';
+  const rawId = user?.id ? String(user.id).slice(0, 8).toUpperCase() : '1084';
+  const donorId = `LL-CARD-2026-${rawId}`;
+
+  const handleDownloadCard = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 500;
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, 800, 500);
+    grad.addColorStop(0, '#0284C7');
+    grad.addColorStop(1, '#0369A1');
+    ctx.fillStyle = grad;
+
+    // Rounded rectangle background
+    const r = 24;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(800 - r, 0);
+    ctx.quadraticCurveTo(800, 0, 800, r);
+    ctx.lineTo(800, 500 - r);
+    ctx.quadraticCurveTo(800, 500, 800 - r, 500);
+    ctx.lineTo(r, 500);
+    ctx.quadraticCurveTo(0, 500, 0, 500 - r);
+    ctx.lineTo(0, r);
+    ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Card border
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.stroke();
+
+    // Header Logo and Title
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.fillText('❤️ LifeLink Official Donor ID', 40, 65);
+
+    // Blood group badge
+    ctx.fillStyle = '#E53935';
+    ctx.beginPath();
+    ctx.moveTo(680, 28);
+    ctx.lineTo(760, 28);
+    ctx.quadraticCurveTo(770, 28, 770, 38);
+    ctx.lineTo(770, 72);
+    ctx.quadraticCurveTo(770, 82, 760, 82);
+    ctx.lineTo(680, 82);
+    ctx.quadraticCurveTo(670, 82, 670, 72);
+    ctx.lineTo(670, 38);
+    ctx.quadraticCurveTo(670, 28, 680, 28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(bloodGroup, 720, 66);
+    ctx.textAlign = 'left';
+
+    // Donor Name Section
+    ctx.fillStyle = '#BAE6FD';
+    ctx.font = '600 16px sans-serif';
+    ctx.fillText('VERIFIED DONOR NAME', 40, 160);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.fillText((donorName || 'Donor').toUpperCase(), 40, 205);
+
+    // Donor Info
+    ctx.fillStyle = '#E0F2FE';
+    ctx.font = '18px sans-serif';
+    ctx.fillText('Status: Active Registered Donor  •  National Medical Board Verified', 40, 260);
+    ctx.fillText('Pledged Category: Organ & Emergency Blood Donation', 40, 295);
+
+    // Divider Line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(40, 350);
+    ctx.lineTo(760, 350);
+    ctx.stroke();
+
+    // Footer: ID Code
+    ctx.fillStyle = '#BAE6FD';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('OFFICIAL DONOR ID CODE', 40, 390);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText(donorId, 40, 425);
+
+    // Footer: Verification Seal
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#38BDF8';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('✓ EMERGENCY DIGITAL MEDICAL PASS', 760, 400);
+
+    ctx.fillStyle = '#E0F2FE';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('Valid across all verified partner hospitals nationwide', 760, 425);
+    ctx.textAlign = 'left';
+
+    // Trigger immediate browser file download
+    const link = document.createElement('a');
+    link.download = `LifeLink_Donor_Card_${(donorName || 'donor').replace(/\s+/g, '_')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
@@ -136,8 +247,8 @@ export const QRCodeModal = ({ isOpen, onClose }) => {
           <button className="btn-primary" style={{ fontSize: '0.85rem' }} onClick={() => window.print()}>
             <Printer size={15} /> Print Donor Card
           </button>
-          <button className="btn-outline" style={{ fontSize: '0.85rem' }} onClick={() => alert('Digital Donor Card Certificate saved to Downloads!')}>
-            <Download size={15} /> Download PDF Card
+          <button className="btn-outline" style={{ fontSize: '0.85rem' }} onClick={handleDownloadCard}>
+            <Download size={15} /> Download Card
           </button>
         </div>
 

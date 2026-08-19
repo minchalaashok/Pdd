@@ -9,10 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import { COLORS, RADIUS, SHADOW } from '../theme/colors';
 
 const ROLES = [
-  { id: 'donor',    label: 'Donor',    icon: '🩸', color: COLORS.primary },
-  { id: 'receiver', label: 'Receiver', icon: '🤲', color: COLORS.warning },
-  { id: 'hospital', label: 'Hospital', icon: '🏥', color: COLORS.secondary },
-  { id: 'admin',    label: 'Admin',    icon: '🛡️', color: COLORS.accent },
+  { id: 'donor',    label: 'Donor / Giver 🩸',    icon: '❤️', color: COLORS.primary },
+  { id: 'hospital', label: 'Hospital Portal 🏥', icon: '🏢', color: COLORS.secondary },
 ];
 
 export default function LoginScreen({ navigation }) {
@@ -44,6 +42,19 @@ export default function LoginScreen({ navigation }) {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+
+          {/* Navigation to Register */}
+          <TouchableOpacity 
+            style={{ 
+              alignSelf: 'flex-start', 
+              paddingVertical: 8, 
+              paddingHorizontal: 4, 
+              marginBottom: 10 
+            }} 
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={{ fontSize: 16, color: COLORS.primary, fontWeight: '700' }}>← Register / Join</Text>
+          </TouchableOpacity>
 
           {/* Header */}
           <View style={s.header}>

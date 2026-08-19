@@ -15,11 +15,25 @@ export const AuthProvider = ({ children }) => {
       try {
         const stored = await getToken();
         if (stored) {
-          // Decode JWT payload to get user info (without a library)
-          const payload = JSON.parse(atob(stored.split('.')[1]));
+          // Decode JWT payload to get user info (without a library, React Native compatible)
+          const base64Url = stored.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+          let str = base64.replace(/=+$/, '');
+          let decodedPayload = '';
+          for (let bc = 0, bs = 0, buffer, idx = 0; idx < str.length; ) {
+            const char = str.charAt(idx++);
+            const val = chars.indexOf(char);
+            if (val === -1) continue;
+            buffer = bc % 4 ? buffer * 64 + val : val;
+            if (bc++ % 4) {
+              decodedPayload += String.fromCharCode(255 & (buffer >> ((-2 * bc) & 6)));
+            }
+          }
+          const payload = JSON.parse(decodedPayload);
           if (payload.exp * 1000 > Date.now()) {
             setToken(stored);
-            setUser({ id: payload.id, email: payload.email, role: payload.role, full_name: payload.full_name });
+            setUser({ id: payload.id, email: payload.email, role: payload.role, full_name: payload.name || payload.full_name });
           } else {
             await clearToken(); // Token expired
           }
