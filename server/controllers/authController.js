@@ -4,6 +4,28 @@ const crypto = require('crypto');
 const { query, getOne, run } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/auth');
 
+const cityToState = {
+  'mumbai': 'Maharashtra',
+  'pune': 'Maharashtra',
+  'bangalore': 'Karnataka',
+  'delhi': 'Delhi',
+  'chennai': 'Tamil Nadu',
+  'kolkata': 'West Bengal',
+  'hyderabad': 'Telangana',
+  'ahmedabad': 'Gujarat',
+  'jaipur': 'Rajasthan',
+  'surat': 'Gujarat',
+  'lucknow': 'Uttar Pradesh',
+  'kochi': 'Kerala'
+};
+const getResolvedState = (city, state) => {
+  const normCity = (city || '').toLowerCase().trim();
+  if (cityToState[normCity]) {
+    return cityToState[normCity];
+  }
+  return state || 'Maharashtra';
+};
+
 // Login Handler
 const login = async (req, res) => {
   try {
@@ -96,7 +118,7 @@ const register = async (req, res) => {
     const uRes = await run(
       `INSERT INTO Users (full_name, email, password_hash, role, phone, city, state)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [full_name, email.toLowerCase().trim(), passwordHash, role, phone || '', city || 'Mumbai', state || 'Maharashtra']
+      [full_name, email.toLowerCase().trim(), passwordHash, role, phone || '', city || 'Mumbai', getResolvedState(city, state)]
     );
 
     const userId = uRes.id;
@@ -114,11 +136,37 @@ const register = async (req, res) => {
         [userId, blood_group || 'O+', organ_needed || 'Kidney', 'HIGH', city || 'Mumbai']
       );
     } else if (role === 'hospital') {
-      await run(
+      const hRes = await run(
         `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [userId, hospital_name || full_name, license_number || `LIC-${Date.now()}`, city || 'Mumbai', 'Hospital Address', phone || '', 1]
       );
+      const hId = hRes.id;
+
+      // Seed default blood inventory for the new hospital
+      const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+      for (const bg of bloodGroups) {
+        const units = Math.floor(Math.random() * 45) + 20; // 20 to 65 units
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        await run(
+          `INSERT INTO BloodInventory (hospital_id, blood_group, units_available, expiry_date, status)
+           VALUES (?, ?, ?, ?, ?)`,
+          [hId, bg, units, expiryDate.toISOString().split('T')[0], 'AVAILABLE']
+        );
+      }
+
+      // Seed default organ inventory for the new hospital
+      const organTypes = ['Heart', 'Kidney', 'Liver', 'Lungs', 'Pancreas', 'Eyes', 'Bone Marrow', 'Skin', 'Blood Vessels'];
+      for (const organ of organTypes) {
+        const isAvail = Math.random() > 0.4 ? 'AVAILABLE' : 'WAITING';
+        const waitingCount = Math.floor(Math.random() * 10) + 1;
+        await run(
+          `INSERT INTO OrganInventory (hospital_id, organ_type, availability_status, waiting_list_count)
+           VALUES (?, ?, ?, ?)`,
+          [hId, organ, isAvail, waitingCount]
+        );
+      }
     }
 
     const token = jwt.sign(
@@ -180,7 +228,7 @@ const syncUser = async (req, res) => {
       `INSERT INTO Users (full_name, email, password_hash, role, phone, city, state)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [full_name || normalEmail.split('@')[0], normalEmail, placeholderHash,
-       role, phone || '', city || 'Mumbai', state || 'Maharashtra']
+       role, phone || '', city || 'Mumbai', getResolvedState(city, state)]
     );
     const userId = uRes.id;
 
@@ -198,13 +246,39 @@ const syncUser = async (req, res) => {
         [userId, blood_group || 'O+', organ_needed || 'Kidney', city || 'Mumbai']
       );
     } else if (role === 'hospital') {
-      await run(
+      const hRes = await run(
         `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
-         VALUES (?, ?, ?, ?, ?, ?, 0)`,
+         VALUES (?, ?, ?, ?, ?, ?, 1)`, // auto-approving for smooth faculty demo
         [userId, hospital_name || full_name || 'Hospital',
          license_number || `LIC-${Date.now()}`, city || 'Mumbai',
          'Hospital Address', phone || '']
       );
+      const hId = hRes.id;
+
+      // Seed default blood inventory for the new hospital
+      const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+      for (const bg of bloodGroups) {
+        const units = Math.floor(Math.random() * 45) + 20;
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        await run(
+          `INSERT INTO BloodInventory (hospital_id, blood_group, units_available, expiry_date, status)
+           VALUES (?, ?, ?, ?, ?)`,
+          [hId, bg, units, expiryDate.toISOString().split('T')[0], 'AVAILABLE']
+        );
+      }
+
+      // Seed default organ inventory for the new hospital
+      const organTypes = ['Heart', 'Kidney', 'Liver', 'Lungs', 'Pancreas', 'Eyes', 'Bone Marrow', 'Skin', 'Blood Vessels'];
+      for (const organ of organTypes) {
+        const isAvail = Math.random() > 0.4 ? 'AVAILABLE' : 'WAITING';
+        const waitingCount = Math.floor(Math.random() * 10) + 1;
+        await run(
+          `INSERT INTO OrganInventory (hospital_id, organ_type, availability_status, waiting_list_count)
+           VALUES (?, ?, ?, ?)`,
+          [hId, organ, isAvail, waitingCount]
+        );
+      }
     }
 
     // Broadcast so all open dashboards refresh their stats counters

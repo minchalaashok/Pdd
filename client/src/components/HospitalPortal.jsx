@@ -8,35 +8,6 @@ export const HospitalPortal = () => {
   const { user } = useAuth();
   const { refreshVersion } = useRealtime();
   const [activeTab, setActiveTab] = useState('donors');
-
-  if (user?.hospital?.is_approved !== 1) {
-    const statusMap = {
-      0: { title: 'Verification Pending', icon: <Clock size={48} color="#FB8C00" />, desc: 'Your hospital registration request has been received. Our higher authority/admin is currently verifying your license and credentials.', badge: 'PENDING' },
-      2: { title: 'Registration Rejected', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'We regret to inform you that your registration request was rejected. Please verify your details or contact admin support.', badge: 'REJECTED' },
-      3: { title: 'Credentials Under Review', icon: <RefreshCw size={48} color="#1976D2" />, desc: 'Your documents are actively being reviewed. This process normally takes up to 24-48 business hours.', badge: 'UNDER REVIEW' },
-      4: { title: 'Account Suspended', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'Your account access has been suspended due to policy violations. Please contact the administrator.', badge: 'SUSPENDED' }
-    };
-
-    const currentStatus = statusMap[user?.hospital?.is_approved] || statusMap[0];
-
-    return (
-      <div style={{ maxWidth: 600, margin: '80px auto', padding: '40px 24px', textAlign: 'center' }} className="glass-card">
-        <div style={{ display: 'inline-flex', padding: 20, borderRadius: '50%', background: 'var(--bg-main)', marginBottom: 20 }}>
-          {currentStatus.icon}
-        </div>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12 }}>{currentStatus.title}</h2>
-        <span className="badge badge-warning" style={{ display: 'inline-block', marginBottom: 20, fontSize: '0.8rem', padding: '6px 12px' }}>
-          STATUS: {currentStatus.badge}
-        </span>
-        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.95rem', marginBottom: 24 }}>
-          {currentStatus.desc}
-        </p>
-        <div style={{ padding: '16px', background: 'rgba(229,57,53,0.05)', borderRadius: 10, border: '1px dashed rgba(229,57,53,0.2)', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-          🔒 <strong>Security Restriction:</strong> Your hospital account is not currently authorized to access donor information, search donor directory, or create active transplantation requests.
-        </div>
-      </div>
-    );
-  }
   
   // Donors directory state
   const [donorsList, setDonorsList] = useState([]);
@@ -215,6 +186,39 @@ export const HospitalPortal = () => {
     });
     loadData();
   };
+
+  if (!user) {
+    return null;
+  }
+
+  if (user?.hospital?.is_approved !== 1) {
+    const statusMap = {
+      0: { title: 'Verification Pending', icon: <Clock size={48} color="#FB8C00" />, desc: 'Your hospital registration request has been received. Our higher authority/admin is currently verifying your license and credentials.', badge: 'PENDING' },
+      2: { title: 'Registration Rejected', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'We regret to inform you that your registration request was rejected. Please verify your details or contact admin support.', badge: 'REJECTED' },
+      3: { title: 'Credentials Under Review', icon: <RefreshCw size={48} color="#1976D2" />, desc: 'Your documents are actively being reviewed. This process normally takes up to 24-48 business hours.', badge: 'UNDER REVIEW' },
+      4: { title: 'Account Suspended', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'Your account access has been suspended due to policy violations. Please contact the administrator.', badge: 'SUSPENDED' }
+    };
+
+    const currentStatus = statusMap[user?.hospital?.is_approved] || statusMap[0];
+
+    return (
+      <div style={{ maxWidth: 600, margin: '80px auto', padding: '40px 24px', textAlign: 'center' }} className="glass-card">
+        <div style={{ display: 'inline-flex', padding: 20, borderRadius: '50%', background: 'var(--bg-main)', marginBottom: 20 }}>
+          {currentStatus.icon}
+        </div>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12 }}>{currentStatus.title}</h2>
+        <span className="badge badge-warning" style={{ display: 'inline-block', marginBottom: 20, fontSize: '0.8rem', padding: '6px 12px' }}>
+          STATUS: {currentStatus.badge}
+        </span>
+        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.95rem', marginBottom: 24 }}>
+          {currentStatus.desc}
+        </p>
+        <div style={{ padding: '16px', background: 'rgba(229,57,53,0.05)', borderRadius: 10, border: '1px dashed rgba(229,57,53,0.2)', fontSize: '0.85rem', color: 'var(--text-main)' }}>
+          🔒 <strong>Security Restriction:</strong> Your hospital account is not currently authorized to access donor information, search donor directory, or create active transplantation requests.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
@@ -538,7 +542,7 @@ export const HospitalPortal = () => {
                   </div>
 
                   <div style={{ fontSize: '0.88rem', color: 'var(--text-main)', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div>📍 Location: <strong>{donor.city}, {donor.state || 'Maharashtra'}</strong></div>
+                    <div>📍 Location: <strong>{donor.city}, {(!donor.state || donor.state === 'State') ? (donor.city === 'Bangalore' ? 'Karnataka' : donor.city === 'Delhi' ? 'Delhi' : donor.city === 'Chennai' ? 'Tamil Nadu' : donor.city === 'Hyderabad' ? 'Telangana' : donor.city === 'Kolkata' ? 'West Bengal' : 'Maharashtra') : donor.state}</strong></div>
                     <div>📞 Phone: <strong>{donor.phone || 'N/A'}</strong></div>
                     <div>✉️ Email: <strong>{donor.email}</strong></div>
                   </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Heart, Droplet, MapPin, Award, ShieldCheck, Clock, FileText, QrCode, Upload, CheckCircle, AlertTriangle, PhoneCall, Plus, ExternalLink, Calendar } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -58,6 +58,16 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
   const [activeContact, setActiveContact] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newChatMessage, setNewChatMessage] = useState('');
+
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
 
   const loadContacts = async () => {
     const res = await fetchApi('/chat/contacts');
@@ -667,6 +677,36 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
             {/* Contacts Sidebar */}
             <div style={{ borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ padding: '16px', fontWeight: 800, borderBottom: '1px solid var(--border)' }}>Conversations</div>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.02)' }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 800, display: 'block', marginBottom: 6, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>💬 Start New Chat</label>
+                <select
+                  className="form-input"
+                  style={{ width: '100%', padding: '6px 10px', fontSize: '0.82rem', borderRadius: 8, background: 'var(--bg-main)', color: 'var(--text-main)', border: '1px solid var(--border)' }}
+                  onChange={(e) => {
+                    const hospitalUserId = Number(e.target.value);
+                    if (!hospitalUserId) return;
+                    const selectedHosp = hospitals.find(h => h.user_id === hospitalUserId);
+                    if (selectedHosp) {
+                      const newContact = {
+                        id: selectedHosp.user_id,
+                        full_name: selectedHosp.hospital_name,
+                        role: 'hospital',
+                        email: selectedHosp.email
+                      };
+                      if (!contacts.some(c => c.id === newContact.id)) {
+                        setContacts(prev => [newContact, ...prev]);
+                      }
+                      setActiveContact(newContact);
+                    }
+                  }}
+                  value={activeContact?.role === 'hospital' ? activeContact.id : ''}
+                >
+                  <option value="">-- Select Hospital to Chat --</option>
+                  {hospitals.map(h => (
+                    <option key={h.id} value={h.user_id}>{h.hospital_name} ({h.city})</option>
+                  ))}
+                </select>
+              </div>
               <div style={{ flex: 1, overflowY: 'auto' }}>
                 {contacts.length === 0 ? (
                   <div style={{ padding: 20, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
@@ -692,7 +732,7 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
             </div>
 
             {/* Chat Messages Panel */}
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
               {activeContact ? (
                 <>
                   {/* Chat Header */}
@@ -708,29 +748,32 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
                         No messages yet. Send a message to start the conversation.
                       </div>
                     ) : (
-                      chatMessages.map(m => {
-                        const isMe = m.sender_id === user.id;
-                        return (
-                          <div
-                            key={m.id}
-                            style={{
-                              alignSelf: isMe ? 'flex-end' : 'flex-start',
-                              maxWidth: '70%',
-                              padding: '10px 14px',
-                              borderRadius: 12,
-                              background: isMe ? 'var(--primary)' : 'var(--bg-card)',
-                              color: isMe ? 'white' : 'var(--text-main)',
-                              border: '1px solid var(--border)',
-                              fontSize: '0.88rem'
-                            }}
-                          >
-                            <div>{m.message}</div>
-                            <div style={{ fontSize: '0.68rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
-                              {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <>
+                        {chatMessages.map(m => {
+                          const isMe = m.sender_id === user.id;
+                          return (
+                            <div
+                              key={m.id}
+                              style={{
+                                alignSelf: isMe ? 'flex-end' : 'flex-start',
+                                maxWidth: '70%',
+                                padding: '10px 14px',
+                                borderRadius: 12,
+                                background: isMe ? 'var(--primary)' : 'var(--bg-card)',
+                                color: isMe ? 'white' : 'var(--text-main)',
+                                border: '1px solid var(--border)',
+                                fontSize: '0.88rem'
+                              }}
+                            >
+                              <div>{m.message}</div>
+                              <div style={{ fontSize: '0.68rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
+                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })
+                          );
+                        })}
+                        <div ref={messagesEndRef} />
+                      </>
                     )}
                   </div>
 

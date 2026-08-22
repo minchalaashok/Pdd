@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { RealtimeProvider } from './context/RealtimeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Navbar } from './components/Navbar';
@@ -18,7 +18,16 @@ import { SignUpPage } from './pages/SignUpPage';
 import './styles/theme.css';
 
 export function AppContent() {
+  const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState('landing');
+
+  useEffect(() => {
+    if (!user && ['user', 'hospital', 'admin'].includes(currentTab)) {
+      setCurrentTab('landing');
+      setAuthPage('signup');
+    }
+  }, [user, currentTab]);
+
   const [isSosOpen, setIsSosOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [isAiBotOpen, setIsAiBotOpen] = useState(false);

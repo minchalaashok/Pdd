@@ -4,10 +4,13 @@
   "private": true,
   "description": "LifeLink Smart Organ & Blood Donation Platform",
   "scripts": {
-    "dev": "npm --prefix client run dev",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "dev:client": "npm --prefix client run dev",
     "dev:server": "npm --prefix server run dev",
     "start:server": "npm --prefix server start",
     "build:client": "npm --prefix client run build"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }

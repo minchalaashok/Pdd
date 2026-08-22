@@ -78,13 +78,21 @@ const sendMessage = async (req, res) => {
 const getChatContacts = async (req, res) => {
   try {
     const currentUserId = req.user.id;
+    const currentUserRole = req.user.role || 'donor';
+
+    let targetRoleFilter = "";
+    if (currentUserRole === 'donor' || currentUserRole === 'receiver') {
+      targetRoleFilter = "AND u.role = 'hospital'";
+    } else if (currentUserRole === 'hospital') {
+      targetRoleFilter = "AND (u.role = 'donor' OR u.role = 'receiver')";
+    }
 
     // Get unique user IDs of people who have sent or received messages to/from currentUserId
     const contacts = await query(
       `SELECT DISTINCT u.id, u.full_name, u.role, u.email
        FROM Chats c
        JOIN Users u ON (c.sender_id = u.id OR c.receiver_id = u.id)
-       WHERE (c.sender_id = ? OR c.receiver_id = ?) AND u.id != ?`,
+       WHERE (c.sender_id = ? OR c.receiver_id = ?) AND u.id != ? ${targetRoleFilter}`,
       [currentUserId, currentUserId, currentUserId]
     );
 
