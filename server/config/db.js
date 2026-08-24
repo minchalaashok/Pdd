@@ -5,12 +5,20 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('SUPABASE_URL and SUPABASE_KEY must be set in server/.env');
-  process.exit(1);
+  console.error('⚠️  WARNING: SUPABASE_URL and SUPABASE_KEY are not set.');
+  console.error('   Set them in Render Dashboard → Environment Variables.');
+  console.error('   The server will start but DB operations will fail until configured.');
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-console.log('Supabase connected:', supabaseUrl);
+const supabase = supabaseUrl && supabaseKey
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
+
+if (supabase) {
+  console.log('✅ Supabase connected:', supabaseUrl);
+} else {
+  console.warn('🔴 Supabase not connected — running without database.');
+}
 
 function tableName(sql) {
   const m =
@@ -56,6 +64,7 @@ function applyWhere(builder, sql, params) {
 }
 
 const query = async (sql, params) => {
+  if (!supabase) { console.warn('[DB] Supabase not configured'); return []; }
   try {
     const tbl = tableName(sql);
     if (!tbl) { console.error('[DB] Cannot parse table from:', sql.slice(0,80)); return []; }
