@@ -2,13 +2,14 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 
 const RealtimeContext = createContext();
 
-// In dev: localhost:5000 | In production: Render.com URL from VITE_API_URL env var
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-// Derive WebSocket URL from API URL (http→ws, https→wss)
-const WS_URL = API_BASE
-  .replace('/api', '')
-  .replace(/^http/, 'ws');
+// Auto-detect production vs development
+const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+const API_BASE = isProduction
+  ? `${window.location.protocol}//${window.location.host}/api`
+  : 'http://localhost:5000/api';
+const WS_URL = isProduction
+  ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+  : 'ws://localhost:5000';
 
 // All stats start at real 0 — populated from DB via /api/stats
 const INITIAL_STATS = {

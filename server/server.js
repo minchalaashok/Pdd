@@ -99,25 +99,7 @@ app.use('/api/auth', authLimiter);
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api', apiRoutes);
 
-// ── Root & Health Endpoints ───────────────────────────────────────────────────
-app.get(['/', '/api-info'], (req, res) => {
-  res.json({
-    status: 'ONLINE',
-    service: 'LifeLink Smart Organ & Blood Donation API Server',
-    version: '2.0.0',
-    endpoints: {
-      health: '/api/health',
-      publicStats: '/api/stats',
-      searchDonors: '/api/donors/search',
-      searchBlood: '/api/inventory/blood',
-      searchOrgans: '/api/inventory/organs',
-      aiMatching: '/api/ai/match-donors',
-      aiChatbot: '/api/ai/chat'
-    },
-    timestamp: new Date().toISOString()
-  });
-});
-
+// ── Health & Utility Endpoints ────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'HEALTHY',
@@ -128,13 +110,62 @@ app.get('/api/health', (req, res) => {
 });
 
 app.get('/download-apk', (req, res) => {
-  res.download(path.join(__dirname, '..', 'LifeLink-app-debug.apk'), 'LifeLink.apk');
+  const apkPath = path.join(__dirname, '..', 'LifeLink-app-debug.apk');
+  if (require('fs').existsSync(apkPath)) {
+    res.download(apkPath, 'LifeLink.apk');
+  } else {
+    res.status(404).json({ success: false, message: 'APK not yet built' });
+  }
 });
 
-// ── 404 Handler ───────────────────────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` });
-});
+// ── Serve Built React Frontend (Production) ───────────────────────────────────
+
+// In production (Render), serve the Vite build output from ../client/dist
+const FRONTEND_DIST = path.join(__dirname, '..', 'client', 'dist');
+const fs = require('fs');  // already required above — safe to re-require in Node
+
+if (fs.existsSync(FRONTEND_DIST)) {
+  // Serve static assets (JS, CSS, images)
+  app.use(express.static(FRONTEND_DIST, {
+    maxAge: '7d',
+    etag: true,
+  }));
+
+  // SPA fallback — all non-API routes serve index.html
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+      return res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` });
+    }
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+} else {
+  // Dev mode — no frontend build, just show API info at root
+  app.get('/', (req, res) => {
+    res.json({
+      status: 'ONLINE',
+      service: 'LifeLink Smart Organ & Blood Donation API Server',
+      version: '2.0.0',
+      note: 'Frontend not built yet. Run: npm run build:client',
+      endpoints: {
+        health: '/api/health',
+        publicStats: '/api/stats',
+        searchDonors: '/api/donors/search',
+        searchBlood: '/api/inventory/blood',
+        searchOrgans: '/api/inventory/organs',
+        aiMatching: '/api/ai/match-donors',
+        aiChatbot: '/api/ai/chat'
+      },
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // ── 404 Handler ─────────────────────────────────────────────────────────────
+  app.use((req, res) => {
+    res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` });
+  });
+}
+
+
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
 // Must have exactly 4 args to be recognized as error middleware by Express.

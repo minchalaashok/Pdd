@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: lifelink-app
+    env: node
+    region: singapore
+    plan: free
+    # rootDir is project root (not /server) so we can build client too
+    buildCommand: npm install && npm install --prefix client && npm install --prefix server && npm run build:client
+    startCommand: node server/server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Set these in Render Dashboard → Environment Variables:
+      # JWT_SECRET  — a long random string
+      # SUPABASE_URL — your Supabase project URL
+      # SUPABASE_KEY — your Supabase service_role key
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
