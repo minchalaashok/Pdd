@@ -5,11 +5,12 @@ const RealtimeContext = createContext();
 // Auto-detect production vs development
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
 const API_BASE = isProduction
-  ? `${window.location.protocol}//${window.location.host}/api`
+  ? 'https://pdd-gq6q.onrender.com/api'
   : 'http://localhost:5000/api';
 const WS_URL = isProduction
-  ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+  ? 'wss://pdd-gq6q.onrender.com'
   : 'ws://localhost:5000';
+
 
 // All stats start at real 0 — populated from DB via /api/stats
 const INITIAL_STATS = {

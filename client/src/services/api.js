@@ -3,7 +3,7 @@
 // - In development, we call localhost:5000
 const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
 const API_BASE_URL = isProduction
-  ? `${window.location.protocol}//${window.location.host}/api`
+  ? 'https://pdd-gq6q.onrender.com/api'
   : 'http://localhost:5000/api';
 
 export const getApiBase = () => API_BASE_URL;
