@@ -3,7 +3,7 @@
 // For local dev testing: change to your machine's local IP e.g. http://192.168.1.x:5000/api
 import * as SecureStore from 'expo-secure-store';
 
-export const API_BASE_URL = 'https://pdd-1-we4e.onrender.com/api';
+export const API_BASE_URL = 'https://pdd-gq6q.onrender.com/api';
 const TOKEN_KEY = 'lifelink_jwt_token';
 
 // ─── Token helpers ────────────────────────────────────────
