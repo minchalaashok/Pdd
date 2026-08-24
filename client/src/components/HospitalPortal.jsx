@@ -232,9 +232,11 @@ export const HospitalPortal = () => {
               {user?.hospital?.hospital_name || user?.full_name || 'Hospital'} Portal
             </h2>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-            Verified Hospital License: {user?.hospital?.license_number || 'Pending'} • Ward 4 Emergency Transplants
-          </p>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div>🛡️ Verified License: <strong>{user?.hospital?.license_number || 'Pending'}</strong></div>
+            <div>📍 Location: <strong>{user?.hospital?.address || 'Hospital Address'}, {user?.hospital?.city || user?.city || 'Mumbai'}</strong></div>
+            <div>📞 Contact Phone: <strong>{user?.hospital?.phone || user?.phone || 'N/A'}</strong></div>
+          </div>
         </div>
 
         <button className="btn-secondary" onClick={loadData} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -545,6 +547,12 @@ export const HospitalPortal = () => {
                     <div>📍 Location: <strong>{donor.city}, {(!donor.state || donor.state === 'State') ? (donor.city === 'Bangalore' ? 'Karnataka' : donor.city === 'Delhi' ? 'Delhi' : donor.city === 'Chennai' ? 'Tamil Nadu' : donor.city === 'Hyderabad' ? 'Telangana' : donor.city === 'Kolkata' ? 'West Bengal' : 'Maharashtra') : donor.state}</strong></div>
                     <div>📞 Phone: <strong>{donor.phone || 'N/A'}</strong></div>
                     <div>✉️ Email: <strong>{donor.email}</strong></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                      <div>🎂 Age: <strong>{donor.age || '28'} Yrs</strong></div>
+                      <div>⚥ Gender: <strong>{donor.gender || 'Male'}</strong></div>
+                      <div>🏆 Donations: <strong>{donor.total_donations || '0'} times</strong></div>
+                      <div>📅 Last Donated: <strong>{donor.last_donated_at ? new Date(donor.last_donated_at).toLocaleDateString() : 'Never'}</strong></div>
+                    </div>
                   </div>
 
                   <button className="btn-primary" style={{ width: '100%', fontSize: '0.88rem' }} onClick={() => setActiveChatDonor(donor)}>
