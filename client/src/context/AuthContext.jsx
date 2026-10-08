@@ -59,58 +59,43 @@ export const AuthProvider = ({ children }) => {
 
   // ─── Login ────────────────────────────────────────────────────────────────
   const login = async (email, password, role) => {
-    // 1. Try Supabase Auth
+    // 1. Primary: Direct LifeLink API (Fast, Reliable, No rate limit blocks)
+    try {
+      const res = await fetchApi('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: (email || '').toLowerCase().trim(), password, role })
+      });
+      if (res && res.success) {
+        localStorage.setItem('lifelink_token', res.token);
+        localStorage.setItem('lifelink_user', JSON.stringify(res.user));
+        setUser(res.user);
+        return res;
+      } else if (res && res.message && !res.message.includes('Network connection failed')) {
+        return res;
+      }
+    } catch (apiErr) {
+      console.warn('Primary login error, checking fallback:', apiErr);
+    }
+
+    // 2. Fallback: Supabase Auth
     if (isSupabaseActive) {
       try {
         const res = await supabaseAuthService.login(email, password);
-        if (res.success) {
+        if (res && res.success) {
           const userWithRole = { ...res.user, role: role || res.user.role || 'donor' };
-
-          // Sync to custom tables and get a server-issued JWT
           const syncRes = await syncProfileToServer({ ...userWithRole, email, password });
           const token   = syncRes?.token || res.token;
-
           localStorage.setItem('lifelink_token', token);
           localStorage.setItem('lifelink_user', JSON.stringify(userWithRole));
           setUser(userWithRole);
           return { success: true, user: userWithRole };
         }
       } catch (err) {
-        console.warn('Supabase login attempt info:', err.message);
+        console.warn('Supabase login fallback info:', err.message);
       }
     }
 
-    // 2. Try Firebase Auth
-    if (isFirebaseActive) {
-      try {
-        const res = await firebaseAuthService.login(email, password);
-        if (res.success) {
-          const userWithRole = { ...res.user, role: role || res.user.role || 'donor' };
-
-          const syncRes = await syncProfileToServer({ ...userWithRole, email });
-          const token   = syncRes?.token || res.token;
-
-          localStorage.setItem('lifelink_token', token);
-          localStorage.setItem('lifelink_user', JSON.stringify(userWithRole));
-          setUser(userWithRole);
-          return { success: true, user: userWithRole };
-        }
-      } catch (err) {
-        console.warn('Firebase login attempt info:', err.message);
-      }
-    }
-
-    // 3. Local API fallback
-    const res = await fetchApi('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, role })
-    });
-    if (res.success) {
-      localStorage.setItem('lifelink_token', res.token);
-      localStorage.setItem('lifelink_user', JSON.stringify(res.user));
-      setUser(res.user);
-    }
-    return res;
+    return { success: false, message: 'Invalid email or password.' };
   };
 
   // ─── Demo Login ───────────────────────────────────────────────────────────
@@ -126,59 +111,43 @@ export const AuthProvider = ({ children }) => {
 
   // ─── Register ─────────────────────────────────────────────────────────────
   const register = async (userData) => {
-    // 1. Try Supabase Auth
+    // 1. Primary: Direct LifeLink API (Instant account creation, auto-approved hospitals, no rate limits)
+    try {
+      const res = await fetchApi('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+      });
+      if (res && res.success) {
+        localStorage.setItem('lifelink_token', res.token);
+        localStorage.setItem('lifelink_user', JSON.stringify(res.user));
+        setUser(res.user);
+        return res;
+      } else if (res && res.message && !res.message.includes('Network connection failed')) {
+        return res;
+      }
+    } catch (apiErr) {
+      console.warn('Primary register error, checking fallback:', apiErr);
+    }
+
+    // 2. Fallback: Supabase Auth
     if (isSupabaseActive) {
       try {
         const res = await supabaseAuthService.register(userData);
-        if (res.success) {
+        if (res && res.success) {
           const userWithRole = { ...res.user, role: userData.role || res.user.role || 'donor' };
-
-          // Sync the new user into custom tables → populates stats counters
-          // and broadcasts USER_REGISTERED WS event to all connected browsers
           const syncRes = await syncProfileToServer({ ...userData, ...userWithRole });
           const token   = syncRes?.token || res.token;
-
           localStorage.setItem('lifelink_token', token);
           localStorage.setItem('lifelink_user', JSON.stringify(userWithRole));
           setUser(userWithRole);
           return { success: true, user: userWithRole };
         }
       } catch (err) {
-        console.warn('Supabase registration fallback to API:', err.message);
+        console.warn('Supabase registration fallback info:', err.message);
       }
     }
 
-    // 2. Try Firebase Auth
-    if (isFirebaseActive) {
-      try {
-        const res = await firebaseAuthService.register(userData);
-        if (res.success) {
-          const userWithRole = { ...res.user, role: userData.role || res.user.role || 'donor' };
-
-          const syncRes = await syncProfileToServer({ ...userData, ...userWithRole });
-          const token   = syncRes?.token || res.token;
-
-          localStorage.setItem('lifelink_token', token);
-          localStorage.setItem('lifelink_user', JSON.stringify(userWithRole));
-          setUser(userWithRole);
-          return { success: true, user: userWithRole };
-        }
-      } catch (err) {
-        console.warn('Firebase registration fallback to API:', err.message);
-      }
-    }
-
-    // 3. Local API fallback (already populates all custom tables)
-    const res = await fetchApi('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-    if (res.success) {
-      localStorage.setItem('lifelink_token', res.token);
-      localStorage.setItem('lifelink_user', JSON.stringify(res.user));
-      setUser(res.user);
-    }
-    return res;
+    return { success: false, message: 'Registration failed. Please try again.' };
   };
 
   // ─── Logout ───────────────────────────────────────────────────────────────
