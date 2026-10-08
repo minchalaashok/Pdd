@@ -207,6 +207,24 @@ const register = async (req, res) => {
       };
     }
 
+    const token = jwt.sign(
+      { id: userId, email: email.toLowerCase().trim(), role, name: full_name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const broadcast = req.app.get('broadcast');
+    if (broadcast) {
+      try {
+        broadcast('USER_REGISTERED', {
+          user: { id: userId, full_name, email, role, phone, city, blood_group, organ_needed },
+          message: `New ${role.toUpperCase()} registered: ${full_name} (${city})`
+        });
+      } catch (e) {
+        console.warn('Broadcast error:', e.message);
+      }
+    }
+
     return res.status(201).json({
       success: true,
       token,
@@ -223,7 +241,7 @@ const register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ success: false, message: 'Server error during registration' });
+    res.status(500).json({ success: false, message: error.message || 'Server error during registration' });
   }
 };
 
