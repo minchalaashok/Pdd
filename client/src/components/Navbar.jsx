@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useRealtime } from '../context/RealtimeContext';
 import { fetchApi } from '../services/api';
+import { formatNotificationTime } from '../utils/time';
 import { Heart, Sun, Moon, Bell, Shield, PhoneCall, QrCode, User, LogOut,
          Smartphone, Activity, Radio, Building2, Menu, X } from 'lucide-react';
 
@@ -215,7 +216,7 @@ export const Navbar = ({ onOpenSos, onOpenQr, onOpenAuth, onOpenSignUp, onOpenAi
                           <div style={{ fontWeight: 700 }}>{notif.title}</div>
                           <div style={{ color: 'var(--text-main)', fontSize: '0.78rem', marginTop: 4 }}>{notif.message}</div>
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 6, textAlign: 'right' }}>
-                            {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatNotificationTime(notif.created_at)}
                           </div>
                         </div>
                       ))

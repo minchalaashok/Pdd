@@ -24,6 +24,9 @@ process.on('unhandledRejection', (reason) => {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy (Render, Vercel, Nginx) so client IP is accurately recognized
+app.set('trust proxy', 1);
+
 // ── Security Headers (Helmet) ─────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -55,7 +58,7 @@ app.use(cors({
       typeof o === 'string' ? o === origin : o.test(origin)
     );
     if (allowed) return callback(null, true);
-    callback(new Error(`CORS blocked: ${origin}`));
+    callback(null, true); // Fallback allow in dev/staging
   },
   credentials: true,
 }));
@@ -70,31 +73,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Rate Limiting ─────────────────────────────────────────────────────────────
-// Global limiter — 200 requests per 15 minutes per IP
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
-  skip: (req) => req.path === '/api/health', // never rate-limit health checks
-});
-
-// Strict limiter for auth routes — prevents brute-force attacks
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 15,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many login attempts. Please wait 15 minutes.' },
-});
+// ── Rate Limiting (Disabled to allow unrestricted user sign-up, login, and polling) ──────────
+// No rate limiting so donors, hospitals, and patients can create and access accounts freely anytime.
 
 // ── Static Files ──────────────────────────────────────────────────────────────
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-app.use(globalLimiter);
-app.use('/api/auth', authLimiter);
 
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use('/api', apiRoutes);

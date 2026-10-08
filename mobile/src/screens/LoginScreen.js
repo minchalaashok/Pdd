@@ -9,8 +9,10 @@ import { useAuth } from '../context/AuthContext';
 import { COLORS, RADIUS, SHADOW } from '../theme/colors';
 
 const ROLES = [
-  { id: 'donor',    label: 'Donor / Giver 🩸',    icon: '❤️', color: COLORS.primary },
-  { id: 'hospital', label: 'Hospital Portal 🏥', icon: '🏢', color: COLORS.secondary },
+  { id: 'donor',    label: 'Donor / Giver 🩸',     icon: '❤️', color: COLORS.primary },
+  { id: 'hospital', label: 'Hospital Portal 🏥',  icon: '🏢', color: COLORS.secondary },
+  { id: 'receiver', label: 'Patient / Receiver 🚨', icon: '🚑', color: COLORS.accent },
+  { id: 'admin',    label: 'Admin Portal 🛡️',     icon: '⚙️', color: COLORS.warning },
 ];
 
 export default function LoginScreen({ navigation }) {

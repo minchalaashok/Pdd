@@ -35,6 +35,9 @@ router.put('/admin/hospitals/:id/status', verifyToken, authorizeRoles('admin'), 
 router.get('/admin/audit-logs', verifyToken, authorizeRoles('admin'), adminController.getAuditLogs);
 router.post('/admin/reset-db', verifyToken, authorizeRoles('admin'), adminController.resetDatabase);
 
+// Public/Authenticated Hospital Directory (For Donors, Receivers, Patients to browse & chat)
+router.get('/hospitals', verifyToken, adminController.getHospitals);
+
 // AI Intelligence & Chatbot Engine
 router.get('/ai/match-donors', verifyToken, aiController.matchDonors);
 router.post('/ai/chat', verifyToken, aiController.queryMedicalAi);

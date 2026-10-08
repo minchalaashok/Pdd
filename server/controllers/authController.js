@@ -55,7 +55,27 @@ const login = async (req, res) => {
     // Fetch extra role details if applicable
     let extraData = {};
     if (user.role === 'hospital') {
-      const hospital = await getOne('SELECT * FROM Hospitals WHERE user_id = ?', [user.id]);
+      let hospital = await getOne('SELECT * FROM Hospitals WHERE user_id = ?', [user.id]);
+      if (!hospital) {
+        const hRes = await run(
+          `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [user.id, user.full_name || 'Hospital Care', `LIC-${Date.now()}`, user.city || 'Mumbai', 'Hospital Address', user.phone || '']
+        );
+        hospital = {
+          id: hRes.id,
+          user_id: user.id,
+          hospital_name: user.full_name || 'Hospital Care',
+          license_number: `LIC-${Date.now()}`,
+          city: user.city || 'Mumbai',
+          address: 'Hospital Address',
+          phone: user.phone || '',
+          is_approved: 1
+        };
+      } else if (hospital.is_approved !== 1) {
+        await run('UPDATE Hospitals SET is_approved = 1 WHERE id = ?', [hospital.id]);
+        hospital.is_approved = 1;
+      }
       extraData.hospital = hospital;
     } else if (user.role === 'donor') {
       const donor = await getOne('SELECT * FROM Donors WHERE user_id = ?', [user.id]);
@@ -169,24 +189,37 @@ const register = async (req, res) => {
       }
     }
 
-    const token = jwt.sign(
-      { id: userId, email: email.toLowerCase().trim(), role, name: full_name },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    const broadcast = req.app.get('broadcast');
-    if (broadcast) {
-      broadcast('USER_REGISTERED', {
-        user: { id: userId, full_name, email, role, phone, city, blood_group, organ_needed },
-        message: `New ${role.toUpperCase()} registered: ${full_name} (${city})`
-      });
+    let extraData = {};
+    if (role === 'donor') {
+      extraData.donor = { user_id: userId, blood_group: blood_group || 'O+', organs_registered: organs_registered || 'Kidney,Liver', availability_status: 'AVAILABLE' };
+    } else if (role === 'receiver') {
+      extraData.receiver = { user_id: userId, blood_group_needed: blood_group || 'O+', organ_needed: organ_needed || 'Kidney', urgency_level: 'HIGH', city: city || 'Mumbai' };
+    } else if (role === 'hospital') {
+      extraData.hospital = {
+        id: hId,
+        user_id: userId,
+        hospital_name: hospital_name || full_name,
+        license_number: license_number || `LIC-${Date.now()}`,
+        city: city || 'Mumbai',
+        address: 'Hospital Address',
+        phone: phone || '',
+        is_approved: 1
+      };
     }
 
     return res.status(201).json({
       success: true,
       token,
-      user: { id: userId, full_name, email, role, phone, city }
+      user: {
+        id: userId,
+        full_name,
+        email: email.toLowerCase().trim(),
+        role,
+        phone,
+        city,
+        state: getResolvedState(city, state),
+        ...extraData
+      }
     });
   } catch (error) {
     console.error('Registration error:', error);

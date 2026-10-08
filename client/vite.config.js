@@ -12,4 +12,8 @@ export default defineConfig({
     // Inline small assets to reduce file-system round trips in WebView
     assetsInlineLimit: 4096,
   },
+  server: {
+    host: true,
+    port: 5173,
+  },
 })

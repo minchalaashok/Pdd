@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Building2, Droplet, Heart, Users, Activity, CheckCircle, Clock, AlertTriangle, Plus, Search, ShieldCheck, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Building2, Droplet, Heart, Users, Activity, CheckCircle, Clock, AlertTriangle, Plus, Search, ShieldCheck, RefreshCw, Send, Check } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useRealtime } from '../context/RealtimeContext';
 import { useAuth } from '../context/AuthContext';
+import { formatChatTime } from '../utils/time';
 
 export const HospitalPortal = () => {
   const { user } = useAuth();
@@ -20,11 +21,22 @@ export const HospitalPortal = () => {
   const [activeChatDonor, setActiveChatDonor] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newChatMessage, setNewChatMessage] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
+  const chatBottomRef = useRef(null);
+
+  const scrollChatToBottom = () => {
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollChatToBottom();
+  }, [chatMessages, activeChatDonor]);
 
   useEffect(() => {
     if (!activeChatDonor) return;
+    const targetUserId = Number(activeChatDonor.user_id || activeChatDonor.id);
     const fetchChat = async () => {
-      const res = await fetchApi(`/chat/${activeChatDonor.user_id}`);
+      const res = await fetchApi(`/chat/${targetUserId}`);
       if (res.success) {
         setChatMessages(res.messages || []);
       }
@@ -36,20 +48,44 @@ export const HospitalPortal = () => {
 
   const handleSendChatMessage = async (e) => {
     e.preventDefault();
-    if (!newChatMessage.trim() || !activeChatDonor) return;
-    const res = await fetchApi('/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        receiver_id: activeChatDonor.user_id,
-        message: newChatMessage
-      })
-    });
-    if (res.success) {
-      setNewChatMessage('');
-      const chatRes = await fetchApi(`/chat/${activeChatDonor.user_id}`);
-      if (chatRes.success) {
-        setChatMessages(chatRes.messages || []);
+    const msgText = newChatMessage.trim();
+    if (!msgText || !activeChatDonor || sendingChat) return;
+
+    const targetUserId = Number(activeChatDonor.user_id || activeChatDonor.id);
+
+    // Optimistic message UI update
+    const tempMsg = {
+      id: 'temp-' + Date.now(),
+      sender_id: user?.id,
+      receiver_id: targetUserId,
+      message: msgText,
+      created_at: new Date().toISOString()
+    };
+    setChatMessages(prev => [...prev, tempMsg]);
+    setNewChatMessage('');
+    setSendingChat(true);
+
+    try {
+      const res = await fetchApi('/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          receiver_id: targetUserId,
+          message: msgText
+        })
+      });
+
+      if (res.success) {
+        const chatRes = await fetchApi(`/chat/${targetUserId}`);
+        if (chatRes.success && chatRes.messages) {
+          setChatMessages(chatRes.messages);
+        }
+      } else {
+        console.error('Failed to send chat message:', res.message);
       }
+    } catch (err) {
+      console.error('Failed to send chat message:', err);
+    } finally {
+      setSendingChat(false);
     }
   };
 
@@ -189,35 +225,6 @@ export const HospitalPortal = () => {
 
   if (!user) {
     return null;
-  }
-
-  if (user?.hospital?.is_approved !== 1) {
-    const statusMap = {
-      0: { title: 'Verification Pending', icon: <Clock size={48} color="#FB8C00" />, desc: 'Your hospital registration request has been received. Our higher authority/admin is currently verifying your license and credentials.', badge: 'PENDING' },
-      2: { title: 'Registration Rejected', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'We regret to inform you that your registration request was rejected. Please verify your details or contact admin support.', badge: 'REJECTED' },
-      3: { title: 'Credentials Under Review', icon: <RefreshCw size={48} color="#1976D2" />, desc: 'Your documents are actively being reviewed. This process normally takes up to 24-48 business hours.', badge: 'UNDER REVIEW' },
-      4: { title: 'Account Suspended', icon: <AlertTriangle size={48} color="#E53935" />, desc: 'Your account access has been suspended due to policy violations. Please contact the administrator.', badge: 'SUSPENDED' }
-    };
-
-    const currentStatus = statusMap[user?.hospital?.is_approved] || statusMap[0];
-
-    return (
-      <div style={{ maxWidth: 600, margin: '80px auto', padding: '40px 24px', textAlign: 'center' }} className="glass-card">
-        <div style={{ display: 'inline-flex', padding: 20, borderRadius: '50%', background: 'var(--bg-main)', marginBottom: 20 }}>
-          {currentStatus.icon}
-        </div>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12 }}>{currentStatus.title}</h2>
-        <span className="badge badge-warning" style={{ display: 'inline-block', marginBottom: 20, fontSize: '0.8rem', padding: '6px 12px' }}>
-          STATUS: {currentStatus.badge}
-        </span>
-        <p style={{ color: 'var(--text-muted)', lineHeight: 1.6, fontSize: '0.95rem', marginBottom: 24 }}>
-          {currentStatus.desc}
-        </p>
-        <div style={{ padding: '16px', background: 'rgba(229,57,53,0.05)', borderRadius: 10, border: '1px dashed rgba(229,57,53,0.2)', fontSize: '0.85rem', color: 'var(--text-main)' }}>
-          🔒 <strong>Security Restriction:</strong> Your hospital account is not currently authorized to access donor information, search donor directory, or create active transplantation requests.
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -635,50 +642,77 @@ export const HospitalPortal = () => {
             </button>
           </div>
 
-          {/* Messages area */}
-          <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: 'rgba(0,0,0,0.02)' }}>
+          {/* WhatsApp style messages area */}
+          <div style={{
+            flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10,
+            background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.03) 0%, rgba(15, 23, 42, 0.07) 100%)',
+          }}>
             {chatMessages.length === 0 ? (
-              <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: '0.88rem', textAlign: 'center' }}>
-                Say hello to start the donation conversation!
+              <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', background: 'var(--bg-card)', padding: '8px 16px', borderRadius: 20, boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+                🔒 End-to-end medical chat. Say hello to start!
               </div>
             ) : (
-              chatMessages.map((msg) => {
-                const isMe = msg.sender_id === user.id;
+              chatMessages.map((msg, index) => {
+                const isMe = String(msg.sender_id) === String(user?.id);
                 return (
-                  <div key={msg.id} style={{
+                  <div key={msg.id || index} style={{
                     alignSelf: isMe ? 'flex-end' : 'flex-start',
-                    maxWidth: '75%',
-                    background: isMe ? 'var(--primary)' : 'var(--bg-main)',
-                    color: isMe ? 'white' : 'var(--text-main)',
-                    padding: '10px 14px',
-                    borderRadius: 12,
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                    fontSize: '0.88rem'
+                    maxWidth: '78%',
+                    background: isMe ? '#DC2626' : 'var(--bg-card)',
+                    color: isMe ? '#FFFFFF' : 'var(--text-main)',
+                    padding: '8px 14px',
+                    borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                    border: isMe ? 'none' : '1px solid var(--border)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                    fontSize: '0.9rem',
+                    position: 'relative'
                   }}>
-                    <div>{msg.message}</div>
-                    <div style={{ fontSize: '0.7rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {!isMe && (
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary)', marginBottom: 2 }}>
+                        {activeChatDonor.full_name || 'Donor'}
+                      </div>
+                    )}
+                    <div style={{ wordBreak: 'break-word', lineHeight: 1.4 }}>{msg.message}</div>
+                    <div style={{
+                      fontSize: '0.68rem',
+                      opacity: isMe ? 0.85 : 0.6,
+                      marginTop: 4,
+                      textAlign: 'right',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      alignItems: 'center',
+                      gap: 3
+                    }}>
+                      <span>{formatChatTime(msg.created_at)}</span>
+                      {isMe && <span style={{ fontSize: '0.75rem', letterSpacing: -2 }}>✓✓</span>}
                     </div>
                   </div>
                 );
               })
             )}
+            <div ref={chatBottomRef} />
           </div>
 
           {/* Input form */}
-          <form onSubmit={handleSendChatMessage} style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, background: 'var(--bg-card)' }}>
+          <form onSubmit={handleSendChatMessage} style={{ padding: 10, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, background: 'var(--bg-card)', alignItems: 'center' }}>
             <input
               type="text"
               className="form-input"
               value={newChatMessage}
               onChange={(e) => setNewChatMessage(e.target.value)}
-              placeholder="Type your message here..."
-              style={{ flex: 1, borderRadius: 20, padding: '8px 16px' }}
+              placeholder="Type a message..."
+              style={{ flex: 1, borderRadius: 24, padding: '10px 18px', fontSize: '0.88rem' }}
+              disabled={sendingChat}
+              autoFocus
               required
             />
-            <button type="submit" className="btn-primary" style={{ padding: '8px 16px', borderRadius: 20 }}>
-              Send
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={sendingChat || !newChatMessage.trim()}
+              style={{ width: 42, height: 42, padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: (sendingChat || !newChatMessage.trim()) ? 0.6 : 1 }}
+            >
+              <Send size={18} />
             </button>
           </form>
         </div>

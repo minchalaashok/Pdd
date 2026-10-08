@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Heart, Droplet, MapPin, Award, ShieldCheck, Clock, FileText, QrCode, Upload, CheckCircle, AlertTriangle, PhoneCall, Plus, ExternalLink, Calendar } from 'lucide-react';
+import { User, Heart, Droplet, MapPin, Award, ShieldCheck, Clock, FileText, QrCode, Upload, CheckCircle, AlertTriangle, PhoneCall, Plus, ExternalLink, Calendar, MessageSquare, Send, Check, Bell } from 'lucide-react';
 import { fetchApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { formatChatTime, formatNotificationTime } from '../utils/time';
 
 export const UserPortal = ({ onOpenSos, onOpenQr }) => {
   const { user, setUser } = useAuth();
@@ -44,13 +45,30 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
   const [hospitals, setHospitals] = useState([]);
   const [searchCity, setSearchCity] = useState('Mumbai');
 
+  // Notifications State for Donor
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const loadNotifications = async () => {
+    const res = await fetchApi('/notifications');
+    if (res.success) {
+      setNotifications(res.notifications || []);
+      const unread = (res.notifications || []).filter(n => n.is_read === 0).length;
+      setUnreadCount(unread);
+    }
+  };
+
   useEffect(() => {
     const loadHospitals = async () => {
-      const res = await fetchApi(`/admin/hospitals`);
+      const res = await fetchApi('/hospitals');
       if (res.success) setHospitals(res.hospitals || []);
     };
     loadHospitals();
     loadContacts();
+    loadNotifications();
+
+    const notifInterval = setInterval(loadNotifications, 4000);
+    return () => clearInterval(notifInterval);
   }, []);
 
   // Chat state
@@ -58,6 +76,7 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
   const [activeContact, setActiveContact] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [newChatMessage, setNewChatMessage] = useState('');
+  const [sendingChat, setSendingChat] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -72,11 +91,17 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
   const loadContacts = async () => {
     const res = await fetchApi('/chat/contacts');
     if (res.success) {
-      setContacts(res.contacts || []);
+      // Filter out self and ensure only valid conversation partners appear
+      const cleanContacts = (res.contacts || []).filter(c => String(c.id) !== String(user?.id));
+      setContacts(cleanContacts);
+      if (!activeContact && cleanContacts.length > 0) {
+        setActiveContact(cleanContacts[0]);
+      }
     }
   };
 
   const loadChatMessages = async (contactId) => {
+    if (!contactId) return;
     const res = await fetchApi(`/chat/${contactId}`);
     if (res.success) {
       setChatMessages(res.messages || []);
@@ -92,17 +117,40 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
 
   const handleSendChat = async (e) => {
     e.preventDefault();
-    if (!newChatMessage.trim() || !activeContact) return;
-    const res = await fetchApi('/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        receiver_id: activeContact.id,
-        message: newChatMessage
-      })
-    });
-    if (res.success) {
-      setNewChatMessage('');
-      loadChatMessages(activeContact.id);
+    const msgText = newChatMessage.trim();
+    if (!msgText || !activeContact || sendingChat) return;
+
+    const targetUserId = Number(activeContact.id);
+
+    // Optimistic UI update
+    const tempMsg = {
+      id: 'temp-' + Date.now(),
+      sender_id: user?.id,
+      receiver_id: targetUserId,
+      message: msgText,
+      created_at: new Date().toISOString()
+    };
+    setChatMessages(prev => [...prev, tempMsg]);
+    setNewChatMessage('');
+    setSendingChat(true);
+
+    try {
+      const res = await fetchApi('/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          receiver_id: targetUserId,
+          message: msgText
+        })
+      });
+      if (res.success) {
+        await loadChatMessages(targetUserId);
+      } else {
+        console.error('Failed to send chat message:', res.message);
+      }
+    } catch (err) {
+      console.error('Error sending chat message:', err);
+    } finally {
+      setSendingChat(false);
     }
   };
 
@@ -340,10 +388,79 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
             </button>
           </>
         )}
-        <button className={activeTab === 'chats' ? 'btn-primary' : 'btn-outline'} onClick={() => { setActiveTab('chats'); loadContacts(); }}>
-          💬 Hospital Chats
+        <button
+          className={activeTab === 'chats' ? 'btn-primary' : 'btn-outline'}
+          onClick={() => { setActiveTab('chats'); loadContacts(); }}
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <span>💬 Hospital Chats</span>
+          {unreadCount > 0 && (
+            <span className="badge badge-danger" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
+              {unreadCount} New
+            </span>
+          )}
         </button>
       </div>
+
+      {/* Inbound Hospital Inquiries / Alerts Banner on Dashboard */}
+      {notifications.length > 0 && (
+        <div className="glass-card" style={{ padding: 20, marginBottom: 24, borderLeft: '5px solid var(--primary)', background: 'rgba(229, 57, 53, 0.05)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1.5rem' }}>🔔</span>
+              <div>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0 }}>
+                  Hospital Messages & Inquiries
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                  You have {notifications.length} message notification(s) from partner hospitals
+                </p>
+              </div>
+            </div>
+            <button 
+              className="btn-primary" 
+              style={{ fontSize: '0.85rem', padding: '6px 16px' }}
+              onClick={() => {
+                setActiveTab('chats');
+                loadContacts();
+              }}
+            >
+              💬 Open Chat & Reply
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {notifications.slice(0, 3).map((notif) => (
+              <div 
+                key={notif.id} 
+                onClick={() => {
+                  setActiveTab('chats');
+                  loadContacts();
+                }}
+                style={{ 
+                  padding: '10px 14px', 
+                  borderRadius: 8, 
+                  background: notif.is_read === 0 ? 'var(--bg-card)' : 'transparent',
+                  border: '1px solid var(--border)',
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{notif.title}</div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2 }}>{notif.message}</div>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  {formatNotificationTime(notif.created_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: Overview Dashboard */}
       {activeTab === 'overview' && (
@@ -654,10 +771,29 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
                   <span className="badge badge-info">Emergency Ward Open</span>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <a href={`tel:${h.phone}`} className="btn-primary" style={{ flex: 1, textDecoration: 'none', justifyContent: 'center', fontSize: '0.82rem' }}>
                     <PhoneCall size={14} /> Call Hospital
                   </a>
+                  <button
+                    className="btn-outline"
+                    style={{ fontSize: '0.82rem', borderColor: 'var(--primary)', color: 'var(--primary)' }}
+                    onClick={() => {
+                      const contact = {
+                        id: h.user_id,
+                        full_name: h.hospital_name,
+                        role: 'hospital',
+                        email: h.email
+                      };
+                      if (!contacts.some(c => c.id === contact.id)) {
+                        setContacts(prev => [contact, ...prev]);
+                      }
+                      setActiveContact(contact);
+                      setActiveTab('chats');
+                    }}
+                  >
+                    💬 Chat
+                  </button>
                   <button className="btn-outline" style={{ fontSize: '0.82rem' }} onClick={() => alert(`Directions to ${h.hospital_name} loaded in Google Maps!`)}>
                     <MapPin size={14} /> Directions
                   </button>
@@ -709,24 +845,49 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
               </div>
               <div style={{ flex: 1, overflowY: 'auto' }}>
                 {contacts.length === 0 ? (
-                  <div style={{ padding: 20, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-                    No active hospital conversations yet.
+                  <div style={{ padding: 24, fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.8rem', marginBottom: 8 }}>🏥</div>
+                    <div>No active hospital chats.</div>
+                    <div style={{ fontSize: '0.75rem', marginTop: 4 }}>Select a hospital above to start!</div>
                   </div>
                 ) : (
-                  contacts.map(c => (
-                    <div
-                      key={c.id}
-                      onClick={() => setActiveContact(c)}
-                      style={{
-                        padding: '16px', cursor: 'pointer', borderBottom: '1px solid var(--border)',
-                        background: activeContact?.id === c.id ? 'var(--primary-light)' : 'transparent',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)' }}>{c.full_name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2, textTransform: 'capitalize' }}>Role: {c.role}</div>
-                    </div>
-                  ))
+                  contacts.map(c => {
+                    const isSelected = activeContact?.id === c.id;
+                    const displayName = c.full_name?.toLowerCase().includes('hospital') || c.full_name?.startsWith('Dr.')
+                      ? c.full_name
+                      : `${c.full_name} Hospital`;
+                    return (
+                      <div
+                        key={c.id}
+                        onClick={() => setActiveContact(c)}
+                        style={{
+                          padding: '14px 16px', cursor: 'pointer', borderBottom: '1px solid var(--border)',
+                          background: isSelected ? 'rgba(229, 57, 53, 0.08)' : 'transparent',
+                          borderLeft: isSelected ? '4px solid var(--primary)' : '4px solid transparent',
+                          transition: 'all 0.15s ease',
+                          display: 'flex', alignItems: 'center', gap: 12
+                        }}
+                      >
+                        <div style={{
+                          width: 40, height: 40, borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: 'white', fontWeight: 800, fontSize: '1rem', flexShrink: 0
+                        }}>
+                          🏥
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {displayName}
+                          </div>
+                          <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ color: '#10B981', fontWeight: 700 }}>● Active</span>
+                            <span>• {c.city || 'Emergency Unit'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -741,33 +902,53 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{activeContact.email}</div>
                   </div>
 
-                  {/* Messages list */}
-                  <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: 'rgba(0,0,0,0.01)' }}>
+                  {/* Messages list - WhatsApp Theme */}
+                  <div style={{
+                    flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10,
+                    background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.02) 0%, rgba(15, 23, 42, 0.06) 100%)',
+                  }}>
                     {chatMessages.length === 0 ? (
-                      <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                        No messages yet. Send a message to start the conversation.
+                      <div style={{ margin: 'auto', color: 'var(--text-muted)', fontSize: '0.85rem', background: 'var(--bg-card)', padding: '8px 16px', borderRadius: 20, boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+                        🔒 End-to-end encrypted medical discussion. Send a message to start!
                       </div>
                     ) : (
                       <>
-                        {chatMessages.map(m => {
-                          const isMe = m.sender_id === user.id;
+                        {chatMessages.map((m, index) => {
+                          const isMe = String(m.sender_id) === String(user?.id);
                           return (
                             <div
-                              key={m.id}
+                              key={m.id || index}
                               style={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
-                                maxWidth: '70%',
-                                padding: '10px 14px',
-                                borderRadius: 12,
-                                background: isMe ? 'var(--primary)' : 'var(--bg-card)',
-                                color: isMe ? 'white' : 'var(--text-main)',
-                                border: '1px solid var(--border)',
-                                fontSize: '0.88rem'
+                                maxWidth: '75%',
+                                padding: '8px 14px',
+                                borderRadius: isMe ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                                background: isMe ? '#DC2626' : 'var(--bg-card)',
+                                color: isMe ? '#FFFFFF' : 'var(--text-main)',
+                                border: isMe ? 'none' : '1px solid var(--border)',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                                fontSize: '0.9rem',
+                                position: 'relative'
                               }}
                             >
-                              <div>{m.message}</div>
-                              <div style={{ fontSize: '0.68rem', opacity: 0.6, marginTop: 4, textAlign: 'right' }}>
-                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {!isMe && (
+                                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--primary)', marginBottom: 2 }}>
+                                  {activeContact.full_name || 'Hospital / Doctor'}
+                                </div>
+                              )}
+                              <div style={{ wordBreak: 'break-word', lineHeight: 1.4 }}>{m.message}</div>
+                              <div style={{
+                                fontSize: '0.68rem',
+                                opacity: isMe ? 0.85 : 0.6,
+                                marginTop: 4,
+                                textAlign: 'right',
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                alignItems: 'center',
+                                gap: 3
+                              }}>
+                                <span>{formatChatTime(m.created_at)}</span>
+                                {isMe && <span style={{ fontSize: '0.75rem', letterSpacing: -2 }}>✓✓</span>}
                               </div>
                             </div>
                           );
@@ -778,18 +959,25 @@ export const UserPortal = ({ onOpenSos, onOpenQr }) => {
                   </div>
 
                   {/* Input form */}
-                  <form onSubmit={handleSendChat} style={{ padding: 16, borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+                  <form onSubmit={handleSendChat} style={{ padding: 12, borderTop: '1px solid var(--border)', display: 'flex', gap: 8, background: 'var(--bg-card)', alignItems: 'center' }}>
                     <input
                       type="text"
                       className="form-input"
                       value={newChatMessage}
                       onChange={e => setNewChatMessage(e.target.value)}
-                      placeholder="Type your reply here..."
-                      style={{ flex: 1, borderRadius: 20, padding: '8px 16px' }}
+                      placeholder="Type a message..."
+                      style={{ flex: 1, borderRadius: 24, padding: '10px 18px', fontSize: '0.88rem' }}
+                      disabled={sendingChat}
+                      autoFocus
                       required
                     />
-                    <button type="submit" className="btn-primary" style={{ padding: '8px 20px', borderRadius: 20 }}>
-                      Send
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={sendingChat || !newChatMessage.trim()}
+                      style={{ width: 42, height: 42, padding: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: (sendingChat || !newChatMessage.trim()) ? 0.6 : 1 }}
+                    >
+                      <Send size={18} />
                     </button>
                   </form>
                 </>
