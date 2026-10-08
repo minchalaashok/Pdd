@@ -143,50 +143,74 @@ const register = async (req, res) => {
 
     const userId = uRes.id;
 
-    if (role === 'donor') {
-      await run(
-        `INSERT INTO Donors (user_id, blood_group, organs_registered, availability_status)
-         VALUES (?, ?, ?, ?)`,
-        [userId, blood_group || 'O+', organs_registered || 'Kidney,Liver', 'AVAILABLE']
-      );
-    } else if (role === 'receiver') {
-      await run(
-        `INSERT INTO Receivers (user_id, blood_group_needed, organ_needed, urgency_level, city)
-         VALUES (?, ?, ?, ?, ?)`,
-        [userId, blood_group || 'O+', organ_needed || 'Kidney', 'HIGH', city || 'Mumbai']
-      );
-    } else if (role === 'hospital') {
-      const hRes = await run(
-        `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, hospital_name || full_name, license_number || `LIC-${Date.now()}`, city || 'Mumbai', 'Hospital Address', phone || '', 1]
-      );
-      const hId = hRes.id;
+    let hId = null;
+    let finalLicense = '';
 
-      // Seed default blood inventory for the new hospital
-      const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-      for (const bg of bloodGroups) {
-        const units = Math.floor(Math.random() * 45) + 20; // 20 to 65 units
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30);
+    try {
+      if (role === 'donor') {
         await run(
-          `INSERT INTO BloodInventory (hospital_id, blood_group, units_available, expiry_date, status)
-           VALUES (?, ?, ?, ?, ?)`,
-          [hId, bg, units, expiryDate.toISOString().split('T')[0], 'AVAILABLE']
-        );
-      }
-
-      // Seed default organ inventory for the new hospital
-      const organTypes = ['Heart', 'Kidney', 'Liver', 'Lungs', 'Pancreas', 'Eyes', 'Bone Marrow', 'Skin', 'Blood Vessels'];
-      for (const organ of organTypes) {
-        const isAvail = Math.random() > 0.4 ? 'AVAILABLE' : 'WAITING';
-        const waitingCount = Math.floor(Math.random() * 10) + 1;
-        await run(
-          `INSERT INTO OrganInventory (hospital_id, organ_type, availability_status, waiting_list_count)
+          `INSERT INTO Donors (user_id, blood_group, organs_registered, availability_status)
            VALUES (?, ?, ?, ?)`,
-          [hId, organ, isAvail, waitingCount]
+          [userId, blood_group || 'O+', organs_registered || 'Kidney,Liver', 'AVAILABLE']
         );
+      } else if (role === 'receiver') {
+        await run(
+          `INSERT INTO Receivers (user_id, blood_group_needed, organ_needed, urgency_level, city)
+           VALUES (?, ?, ?, ?, ?)`,
+          [userId, blood_group || 'O+', organ_needed || 'Kidney', 'HIGH', city || 'Mumbai']
+        );
+      } else if (role === 'hospital') {
+        finalLicense = (license_number || '').trim();
+        if (!finalLicense) {
+          finalLicense = `LIC-MED-${Date.now()}`;
+        } else {
+          // Check if license already exists; append unique suffix to satisfy UNIQUE constraint
+          const licCheck = await getOne('SELECT id FROM Hospitals WHERE license_number = ?', [finalLicense]);
+          if (licCheck) {
+            finalLicense = `${finalLicense}-${Math.floor(1000 + Math.random() * 9000)}`;
+          }
+        }
+
+        const hRes = await run(
+          `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
+           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+          [userId, hospital_name || full_name, finalLicense, city || 'Mumbai', 'Hospital Address', phone || '']
+        );
+        hId = hRes.id;
+
+        // Seed default blood inventory for the new hospital
+        const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+        for (const bg of bloodGroups) {
+          const units = Math.floor(Math.random() * 45) + 20; // 20 to 65 units
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30);
+          await run(
+            `INSERT INTO BloodInventory (hospital_id, blood_group, units_available, expiry_date, status)
+             VALUES (?, ?, ?, ?, ?)`,
+            [hId, bg, units, expiryDate.toISOString().split('T')[0], 'AVAILABLE']
+          );
+        }
+
+        // Seed default organ inventory for the new hospital
+        const organTypes = ['Heart', 'Kidney', 'Liver', 'Lungs', 'Pancreas', 'Eyes', 'Bone Marrow', 'Skin', 'Blood Vessels'];
+        for (const organ of organTypes) {
+          const isAvail = Math.random() > 0.4 ? 'AVAILABLE' : 'WAITING';
+          const waitingCount = Math.floor(Math.random() * 10) + 1;
+          await run(
+            `INSERT INTO OrganInventory (hospital_id, organ_type, availability_status, waiting_list_count)
+             VALUES (?, ?, ?, ?)`,
+            [hId, organ, isAvail, waitingCount]
+          );
+        }
       }
+    } catch (roleErr) {
+      // Rollback user creation if role assignment fails
+      try {
+        await run('DELETE FROM Users WHERE id = ?', [userId]);
+      } catch (cleanErr) {
+        console.warn('Rollback error:', cleanErr.message);
+      }
+      throw roleErr;
     }
 
     let extraData = {};
@@ -199,7 +223,7 @@ const register = async (req, res) => {
         id: hId,
         user_id: userId,
         hospital_name: hospital_name || full_name,
-        license_number: license_number || `LIC-${Date.now()}`,
+        license_number: finalLicense || license_number || `LIC-${Date.now()}`,
         city: city || 'Mumbai',
         address: 'Hospital Address',
         phone: phone || '',
@@ -297,11 +321,20 @@ const syncUser = async (req, res) => {
         [userId, blood_group || 'O+', organ_needed || 'Kidney', city || 'Mumbai']
       );
     } else if (role === 'hospital') {
+      let finalLicense = (license_number || '').trim();
+      if (!finalLicense) {
+        finalLicense = `LIC-MED-${Date.now()}`;
+      } else {
+        const licCheck = await getOne('SELECT id FROM Hospitals WHERE license_number = ?', [finalLicense]);
+        if (licCheck) {
+          finalLicense = `${finalLicense}-${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+      }
       const hRes = await run(
         `INSERT INTO Hospitals (user_id, hospital_name, license_number, city, address, phone, is_approved)
-         VALUES (?, ?, ?, ?, ?, ?, 1)`, // auto-approving for smooth faculty demo
+         VALUES (?, ?, ?, ?, ?, ?, 1)`,
         [userId, hospital_name || full_name || 'Hospital',
-         license_number || `LIC-${Date.now()}`, city || 'Mumbai',
+         finalLicense, city || 'Mumbai',
          'Hospital Address', phone || '']
       );
       const hId = hRes.id;

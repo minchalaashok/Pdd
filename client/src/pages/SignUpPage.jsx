@@ -39,7 +39,7 @@ export const SignUpPage = ({ onSwitchToSignIn, onSuccess, onBackToHome }) => {
   const [organsRegistered, setOrgansReg]  = useState([]);
   const [organNeeded, setOrganNeeded]     = useState('Kidney');
   const [hospitalName, setHospitalName]   = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState(() => `LIC-MED-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [consent, setConsent]             = useState(false);
 
   const [loading, setLoading]   = useState(false);
